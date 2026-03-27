@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Zap, Coins, Plus, Minus } from 'lucide-react';
+import { Check, Zap, Coins } from 'lucide-react';
 
 export function PricingSection() {
   const [customCoins, setCustomCoins] = useState(1000);
