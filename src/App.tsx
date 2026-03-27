@@ -10,6 +10,7 @@ import { AuthPage } from './pages/AuthPage';
 import { UserDashboard } from './pages/UserDashboard';
 import { UploadPage } from './pages/UploadPage';
 import { SuccessPage } from './pages/SuccessPage';
+import { AdminPage } from './pages/AdminPage';
 
 function Home() {
   return (
@@ -45,7 +46,7 @@ function App() {
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/20 blur-[150px] rounded-full pointer-events-none z-0" />
 
       {/* Hide Navbar and Footer on AuthPage */}
-      {!isAuthPage && <Navbar />}
+      {(!isAuthPage && location.pathname !== '/admin') && <Navbar />}
       
       <main className="flex-grow z-10 w-full flex flex-col items-center">
         <Routes>
@@ -54,10 +55,11 @@ function App() {
           <Route path="/dashboard" element={<UserDashboard />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/success" element={<SuccessPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>
 
-      {!isAuthPage && <Footer />}
+      {(!isAuthPage && location.pathname !== '/admin') && <Footer />}
     </div>
   );
 }

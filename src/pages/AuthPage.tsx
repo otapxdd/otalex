@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User, ArrowRight, Play, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -6,13 +6,44 @@ import { useAuth } from '../contexts/AuthContext';
 
 export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    login();
-    navigate(-1);
+    setLoading(true);
+    setErrorMsg('');
+
+    const formData = new FormData(e.currentTarget);
+    const data: Record<string, any> = Object.fromEntries(formData);
+    
+    // Define action based on isLogin state
+    data.action = isLogin ? 'login' : 'register';
+
+    try {
+      const res = await fetch('http://localhost/otalex/api/auth.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      const json = await res.json();
+      
+      if (json.status === 'success') {
+         login(json.user);
+         navigate(-1);
+      } else {
+         setErrorMsg(json.message || 'Erro de autenticação.');
+      }
+    } catch (err) {
+      setErrorMsg('Erro interno no servidor ou de conexão.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,6 +108,12 @@ export function AuthPage() {
             className="flex flex-col gap-6 w-full max-w-md mx-auto"
             onSubmit={handleSubmit}
           >
+            {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-sm font-medium">
+                  {errorMsg}
+                </div>
+            )}
+
             {!isLogin && (
               <div>
                 <label className="text-sm font-semibold text-zinc-400 mb-2 ml-1 block uppercase tracking-wider">Nome ou Apelido</label>
@@ -84,43 +121,44 @@ export function AuthPage() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User size={20} className="text-zinc-500" />
                   </div>
-                  <input type="text" placeholder="Ex: motion_god" className="w-full bg-zinc-900/50 border border-zinc-700 text-zinc-100 rounded-2xl pl-12 pr-4 py-4 focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all text-base outline-none" required />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="text-sm font-semibold text-zinc-400 mb-2 ml-1 block uppercase tracking-wider">E-mail</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail size={20} className="text-zinc-500" />
-                </div>
-                <input type="email" placeholder="seuemail@exemplo.com" className="w-full bg-zinc-900/50 border border-zinc-700 text-zinc-100 rounded-2xl pl-12 pr-4 py-4 focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all text-base outline-none" required />
+                <input name="username" type="text" placeholder="Ex: motion_god" className="w-full bg-zinc-900/50 border border-zinc-700 text-zinc-100 rounded-2xl pl-12 pr-4 py-4 focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all text-base outline-none" required />
               </div>
             </div>
+          )}
 
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-semibold text-zinc-400 ml-1 block uppercase tracking-wider">Senha</label>
-                {isLogin && <a href="#" className="text-sm text-primary hover:text-primary-hover font-medium transition-colors">Esqueceu a senha?</a>}
+          <div>
+            <label className="text-sm font-semibold text-zinc-400 mb-2 ml-1 block uppercase tracking-wider">E-mail</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Mail size={20} className="text-zinc-500" />
               </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock size={20} className="text-zinc-500" />
-                </div>
-                <input type="password" placeholder="••••••••" className="w-full bg-zinc-900/50 border border-zinc-700 text-zinc-100 rounded-2xl pl-12 pr-4 py-4 focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all text-base outline-none" required />
-              </div>
+              <input name="email" type="email" placeholder="seuemail@exemplo.com" className="w-full bg-zinc-900/50 border border-zinc-700 text-zinc-100 rounded-2xl pl-12 pr-4 py-4 focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all text-base outline-none" required />
             </div>
+          </div>
 
-            <button 
-              type="submit"
-              className="mt-6 w-full bg-primary hover:bg-primary-hover text-white py-4 rounded-2xl font-bold transition-all shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center gap-2 group text-base"
-            >
-              {isLogin ? 'Entrar no Painel' : 'Criar minha conta'}
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </motion.form>
-        </AnimatePresence>
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-semibold text-zinc-400 ml-1 block uppercase tracking-wider">Senha</label>
+              {isLogin && <a href="#" className="text-sm text-primary hover:text-primary-hover font-medium transition-colors">Esqueceu a senha?</a>}
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Lock size={20} className="text-zinc-500" />
+              </div>
+              <input name="password" type="password" placeholder="••••••••" className="w-full bg-zinc-900/50 border border-zinc-700 text-zinc-100 rounded-2xl pl-12 pr-4 py-4 focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all text-base outline-none" required />
+            </div>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={loading}
+            className="mt-6 w-full bg-primary hover:bg-primary-hover disabled:bg-primary/50 text-white py-4 rounded-2xl font-bold transition-all shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center gap-2 group text-base disabled:shadow-none"
+          >
+            {loading ? 'Carregando...' : (isLogin ? 'Entrar no Painel' : 'Criar minha conta')}
+            {!loading && <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />}
+          </button>
+        </motion.form>
+      </AnimatePresence>
         
         <div className="mt-10 text-center w-full max-w-md mx-auto">
           <p className="text-sm text-zinc-500">
