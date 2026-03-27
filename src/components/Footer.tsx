@@ -16,7 +16,7 @@ export function Footer() {
               <span className="text-xl font-bold text-zinc-100">Otalex</span>
             </a>
             <p className="text-sm text-zinc-500 mb-6">
-              Plugin Parallax 3D para After Effects. Crie edições perfeitas em segundos de forma automatizada.
+              Plugin Parallax 3D para After Effects. Larga de coolocar PNG nesse fundo ai! Nosso plugin fará o Parallex pra você.
             </p>
             <div className="flex gap-4">
               <a href="#" className="text-zinc-500 hover:text-primary transition-colors"><Send size={20} /></a>

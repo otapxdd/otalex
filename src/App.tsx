@@ -8,6 +8,8 @@ import { DiscordBanner } from './components/DiscordBanner';
 import { Footer } from './components/Footer';
 import { AuthPage } from './pages/AuthPage';
 import { UserDashboard } from './pages/UserDashboard';
+import { UploadPage } from './pages/UploadPage';
+import { SuccessPage } from './pages/SuccessPage';
 
 function Home() {
   return (
@@ -50,6 +52,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/success" element={<SuccessPage />} />
         </Routes>
       </main>
 

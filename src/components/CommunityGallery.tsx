@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Download, Heart } from 'lucide-react';
+import { Search, Download, Heart, UploadCloud } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const mockTemplates = [
   { id: 1, title: 'Sukuna Domain Expansion', anime: 'Jujutsu Kaisen', author: '@motion_god', likes: 124, img: 'https://images.unsplash.com/photo-1612450893072-dbdb63da8cd9?w=500&q=80' },
@@ -32,17 +33,27 @@ export function CommunityGallery() {
           </p>
         </div>
         
-        <div className="relative w-full md:w-96 group">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search size={18} className="text-zinc-500 group-focus-within:text-secondary transition-colors" />
+        <div className="flex flex-col md:flex-row gap-4 items-center md:items-end w-full md:w-auto">
+          <div className="relative w-full md:w-80 group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search size={18} className="text-zinc-500 group-focus-within:text-secondary transition-colors" />
+            </div>
+            <input
+              type="text"
+              className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+              placeholder="Buscar por anime, cena ou autor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-            placeholder="Buscar por anime, cena ou autor..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          
+          <Link 
+            to="/upload" 
+            target="_blank"
+            className="w-full md:w-auto bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/50 flex items-center justify-center gap-2"
+          >
+            Subir meu Parallax <UploadCloud size={18} />
+          </Link>
         </div>
       </div>
 

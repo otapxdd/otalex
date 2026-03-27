@@ -1,9 +1,21 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Zap, Coins } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export function PricingSection() {
   const [customCoins, setCustomCoins] = useState(1000);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  
+  const handlePurchase = () => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+    } else {
+      navigate('/success');
+    }
+  };
   
   const handleCoinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCustomCoins(Number(e.target.value));
@@ -28,7 +40,7 @@ export function PricingSection() {
     },
     {
       name: "Pacote Mirt",
-      description: "O mais escolhido para projetos reais",
+      description: "O mais escolhido por custo benefício",
       price: "40,00",
       credits: "100 Otacoins",
       unitPrice: "R$ 0,40 cada (20% OFF)",
@@ -44,7 +56,7 @@ export function PricingSection() {
     },
     {
       name: "Pacote Nescoh",
-      description: "Para editores profissionais hardcore",
+      description: "Para não ter dor de cabeça por muito tempo",
       price: "150,00",
       credits: "500 Otacoins",
       unitPrice: "R$ 0,30 cada (40% OFF)",
@@ -119,6 +131,7 @@ export function PricingSection() {
             </ul>
 
             <button 
+              onClick={handlePurchase}
               className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
                 plan.accent
                   ? 'bg-primary hover:bg-primary-hover text-white shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)]'
@@ -176,7 +189,10 @@ export function PricingSection() {
                   {customPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
-              <button className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/50 flex items-center gap-2">
+              <button 
+                onClick={handlePurchase}
+                className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/50 flex items-center gap-2"
+              >
                 Comprar <Zap size={16} />
               </button>
             </div>

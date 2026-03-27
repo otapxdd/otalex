@@ -14,7 +14,8 @@ export function LicenseDashboard() {
     
     // Simulate API call
     setTimeout(() => {
-      if (licenseKey.includes('PRO-') || licenseKey.includes('OTA-')) {
+      // Allow any key long enough for the mock, checking for PRO- for pro users
+      if (licenseKey.length >= 8) {
         setStatus('active');
       } else {
         setStatus('error');
@@ -51,7 +52,7 @@ export function LicenseDashboard() {
           <div className="flex flex-col sm:flex-row gap-3">
             <input 
               type="text" 
-              placeholder="Ex: OTA-XXXX-XXXX-XXXX" 
+              placeholder="Ex: XXXX-XXXX-XXXX" 
               className="flex-1 bg-zinc-950/50 border border-zinc-700/50 text-zinc-100 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm tracking-widest placeholder:tracking-normal uppercase"
               value={licenseKey}
               onChange={(e) => setLicenseKey(e.target.value)}
