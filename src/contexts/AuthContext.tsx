@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import Cookies from 'js-cookie';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -11,30 +12,33 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('__otalex_auth') === 'true';
+    return Cookies.get('__otalex_auth') === 'true';
   });
   
   const [user, setUser] = useState<any>(() => {
-    const raw = localStorage.getItem('__otalex_user');
+    const raw = Cookies.get('__otalex_user');
     return raw ? JSON.parse(raw) : null;
   });
 
   const login = (userData: any) => {
     setIsAuthenticated(true);
     setUser(userData);
-    localStorage.setItem('__otalex_auth', 'true');
-    localStorage.setItem('__otalex_user', JSON.stringify(userData));
+    // Define o cookie para expirar em 7 dias (ajustável)
+    Cookies.set('__otalex_auth', 'true', { expires: 7, secure: true, sameSite: 'strict' });
+    Cookies.set('__otalex_user', JSON.stringify(userData), { expires: 7, secure: true, sameSite: 'strict' });
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUser(null);
-    localStorage.removeItem('__otalex_auth');
-    localStorage.removeItem('__otalex_user');
+    Cookies.remove('__otalex_auth');
+    Cookies.remove('__otalex_user');
   };
 
   useEffect(() => {
-    // Optional: add storage event listener if multi-tab sync is needed
+    // Limpa o localStorage antigo caso ainda existam dados lá
+    localStorage.removeItem('__otalex_auth');
+    localStorage.removeItem('__otalex_user');
   }, []);
 
   return (
