@@ -13,7 +13,10 @@ interface CartContextType {
   addToCart: (item: any) => void;
   removeFromCart: (id: number) => void;
   clearCart: () => void;
+  applyCoupon: (code: string) => boolean;
+  coupon: { code: string; discount: number } | null;
   total: number;
+  subtotal: number;
   itemCount: number;
 }
 
@@ -21,6 +24,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('otalex_cart');
@@ -57,13 +61,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems(prev => prev.filter(i => i.id !== id));
   };
 
-  const clearCart = () => setItems([]);
+  const clearCart = () => {
+    setItems([]);
+    setCoupon(null);
+  };
 
-  const total = items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+  const applyCoupon = (code: string) => {
+    const cleanCode = code.trim().toUpperCase();
+    if (cleanCode === 'TOTALEX100') {
+      setCoupon({ code: cleanCode, discount: 1.0 }); // 100%
+      return true;
+    }
+    return false;
+  };
+
+  const subtotal = items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+  const discountAmount = coupon ? subtotal * coupon.discount : 0;
+  const total = subtotal - discountAmount;
   const itemCount = items.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addToCart, removeFromCart, clearCart, total, itemCount }}>
+    <CartContext.Provider value={{ items, addToCart, removeFromCart, clearCart, applyCoupon, coupon, total, subtotal, itemCount }}>
       {children}
     </CartContext.Provider>
   );

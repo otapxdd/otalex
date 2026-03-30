@@ -14,8 +14,9 @@ export function PricingSection() {
   
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
-  const { items, addToCart, removeFromCart, total, itemCount, clearCart } = useCart();
-  
+  const { items, addToCart, removeFromCart, subtotal, total, itemCount, clearCart, applyCoupon, coupon } = useCart();
+  const [couponInput, setCouponInput] = useState("");
+
   const fetchPlans = async () => {
     try {
       const apiUrl = import.meta.env.PROD 
@@ -41,6 +42,14 @@ export function PricingSection() {
   useEffect(() => {
     fetchPlans();
   }, []);
+  
+  const handleApplyCoupon = () => {
+    if (applyCoupon(couponInput)) {
+      alert("Cupom aplicado!");
+    } else {
+      alert("Cupom inválido.");
+    }
+  };
 
   const handleCheckout = async () => {
     if (!isAuthenticated) {
@@ -52,11 +61,35 @@ export function PricingSection() {
 
     setBuying(true);
     try {
-      // Como o MP Checkout Pro lida melhor com 1 item/preferência por vez para fluxos simples,
-      // vamos criar uma preferência baseada no primeiro item do carrinho ou um resumo.
-      // Aqui, para simplificar e garantir a funcionalidade solicitada:
       const planToBuy = items[0]; 
 
+      // Se o total for zero (Cupom 100% OFF), ignora Mercado Pago e processa direto
+      if (total === 0) {
+        const apiUrl = import.meta.env.PROD 
+          ? 'https://agapesi.ddns.com.br/teste/api/dashboard.php' 
+          : 'http://localhost/otalex/api/dashboard.php';
+
+        const res = await fetch(apiUrl, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ 
+             action: 'buy_package', 
+             user_id: user.id,
+             plan_name: planToBuy.name,
+             otacoins: planToBuy.otacoins,
+             amount: 0
+           })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+           clearCart();
+           navigate('/success', { state: { licenseKey: data.key } });
+           return;
+        }
+      }
+
+      // Fluxo normal Mercado Pago
       const apiUrl = import.meta.env.PROD 
         ? 'https://agapesi.ddns.com.br/teste/api/mercadopago.php' 
         : 'http://localhost/otalex/api/mercadopago.php';
@@ -70,16 +103,14 @@ export function PricingSection() {
           email: user.email,
           plan: {
             name: planToBuy.name,
-            price: planToBuy.price,
+            price: total, // Envia o preço final com desconto
             otacoins: planToBuy.otacoins
           }
         })
       });
 
       const data = await res.json();
-      
       if (data.status === 'success' && data.init_point) {
-        // Redireciona para o Checkout Pro do Mercado Pago
         window.location.href = data.init_point;
       } else {
         alert("Erro ao gerar pagamento: " + (data.message || "Erro desconhecido"));
@@ -241,31 +272,68 @@ export function PricingSection() {
                     <p className="font-bold">Seu carrinho está vazio.</p>
                   </div>
                 ) : (
-                  items.map(item => (
-                    <div key={item.id} className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center group">
-                      <div>
-                        <h4 className="font-bold text-white mb-1">{item.name}</h4>
-                        <div className="flex items-center gap-4 text-xs font-medium">
-                          <span className="text-zinc-500">Qtd: {item.quantity}</span>
-                          <span className="text-primary">R$ {item.price.toFixed(2)}</span>
+                  <>
+                    {items.map(item => (
+                      <div key={item.id} className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center group">
+                        <div>
+                          <h4 className="font-bold text-white mb-1">{item.name}</h4>
+                          <div className="flex items-center gap-4 text-xs font-medium">
+                            <span className="text-zinc-500">Qtd: {item.quantity}</span>
+                            <span className="text-primary">R$ {item.price.toFixed(2)}</span>
+                          </div>
                         </div>
+                        <button 
+                          onClick={() => removeFromCart(item.id)}
+                          className="p-2 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => removeFromCart(item.id)}
-                        className="p-2 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                    ))}
+
+                    <div className="mt-10 pt-6 border-t border-zinc-800/50">
+                       <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 block">Cupom de Desconto</label>
+                       <div className="flex gap-2">
+                          <input 
+                            placeholder="Insira seu código"
+                            value={couponInput}
+                            onChange={e => setCouponInput(e.target.value)}
+                            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:border-primary outline-none"
+                          />
+                          <button 
+                            onClick={handleApplyCoupon}
+                            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                          >
+                            Aplicar
+                          </button>
+                       </div>
+                       {coupon && (
+                         <p className="text-green-400 text-[10px] font-bold mt-2 flex items-center gap-1">
+                           <Check size={12} /> Cupom {coupon.code} aplicado (100% OFF)
+                         </p>
+                       )}
                     </div>
-                  ))
+                  </>
                 )}
               </div>
 
               {items.length > 0 && (
                 <div className="mt-8 pt-8 border-t border-zinc-800 flex flex-col gap-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Total Parcial</span>
-                    <span className="text-3xl font-black text-white">R$ {total.toFixed(2).replace('.', ',')}</span>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-zinc-500">Subtotal</span>
+                      <span className="text-zinc-300">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                    {coupon && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-green-500 font-medium">Desconto (100%)</span>
+                        <span className="text-green-500">- R$ {subtotal.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-zinc-400 font-bold uppercase tracking-widest text-xs">Total</span>
+                      <span className="text-3xl font-black text-white">R$ {total.toFixed(2).replace('.', ',')}</span>
+                    </div>
                   </div>
                   
                   <button 
@@ -273,7 +341,7 @@ export function PricingSection() {
                     disabled={buying}
                     className="w-full bg-primary hover:bg-primary-hover text-white py-5 rounded-3xl font-black uppercase tracking-widest flex justify-center items-center gap-3 shadow-[0_10px_20px_rgba(139,92,246,0.3)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                   >
-                    {buying ? <Loader2 className="animate-spin" size={20} /> : <>Finalizar Compra <ArrowRight size={20} /></>}
+                    {buying ? <Loader2 className="animate-spin" size={20} /> : <>{total === 0 ? 'Resgatar Plano' : 'Finalizar Compra'} <ArrowRight size={20} /></>}
                   </button>
 
                   <button 
