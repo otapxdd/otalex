@@ -24,7 +24,11 @@ export function AuthPage() {
     data.action = isLogin ? 'login' : 'register';
 
     try {
-      const res = await fetch('http://localhost/otalex/api/auth.php', {
+      const apiUrl = import.meta.env.PROD 
+        ? 'https://agapesi.ddns.com.br/teste/api/auth.php' 
+        : 'http://localhost/otalex/api/auth.php';
+
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
