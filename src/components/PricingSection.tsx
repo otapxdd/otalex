@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Check, Zap, Coins, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check, Zap, Coins, Loader2, ShoppingCart, Trash2, X, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 
 export function PricingSection() {
   const [customCoins, setCustomCoins] = useState(1000);
   const [buying, setBuying] = useState(false);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { items, addToCart, removeFromCart, total, itemCount, clearCart } = useCart();
   
   const fetchPlans = async () => {
     try {
@@ -38,40 +42,51 @@ export function PricingSection() {
     fetchPlans();
   }, []);
 
-  const handlePurchase = async (plan: any) => {
+  const handleCheckout = async () => {
     if (!isAuthenticated) {
       navigate('/auth');
       return;
     }
 
+    if (items.length === 0) return;
+
     setBuying(true);
     try {
+      // Como o MP Checkout Pro lida melhor com 1 item/preferência por vez para fluxos simples,
+      // vamos criar uma preferência baseada no primeiro item do carrinho ou um resumo.
+      // Aqui, para simplificar e garantir a funcionalidade solicitada:
+      const planToBuy = items[0]; 
+
       const apiUrl = import.meta.env.PROD 
-        ? 'https://agapesi.ddns.com.br/teste/api/dashboard.php' 
-        : 'http://localhost/otalex/api/dashboard.php';
+        ? 'https://agapesi.ddns.com.br/teste/api/mercadopago.php' 
+        : 'http://localhost/otalex/api/mercadopago.php';
 
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          action: 'buy_package', 
+          action: 'create_preference', 
           user_id: user.id,
-          plan_name: plan.name,
-          otacoins: plan.otacoins,
-          amount: plan.price || plan.amount
+          email: user.email,
+          plan: {
+            name: planToBuy.name,
+            price: planToBuy.price,
+            otacoins: planToBuy.otacoins
+          }
         })
       });
 
       const data = await res.json();
       
-      if (data.status === 'success') {
-        navigate('/success', { state: { licenseKey: data.key } });
+      if (data.status === 'success' && data.init_point) {
+        // Redireciona para o Checkout Pro do Mercado Pago
+        window.location.href = data.init_point;
       } else {
-        alert("Erro ao processar compra: " + data.message);
+        alert("Erro ao gerar pagamento: " + (data.message || "Erro desconhecido"));
       }
     } catch (err) {
       console.error(err);
-      alert("Erro de conexão ao processar compra.");
+      alert("Erro ao conectar com servidor de pagamento.");
     } finally {
       setBuying(false);
     }
@@ -94,6 +109,24 @@ export function PricingSection() {
   return (
     <section id="pricing" className="w-full py-32 container mx-auto px-6 md:px-12 relative">
       
+      {/* Carrinho Flutuante */}
+      <div className="fixed bottom-8 right-8 z-[100]">
+        <button 
+          onClick={() => setIsCartOpen(true)}
+          className="bg-primary hover:bg-primary-hover text-white p-4 rounded-2xl shadow-[0_10px_30px_rgba(139,92,246,0.4)] flex items-center gap-3 transition-all hover:scale-110 active:scale-95 group border border-primary/20"
+        >
+          <div className="relative">
+             <ShoppingCart size={24} />
+             {itemCount > 0 && (
+               <span className="absolute -top-2 -right-2 bg-secondary text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-primary animate-bounce">
+                 {itemCount}
+               </span>
+             )}
+          </div>
+          <span className="font-bold text-sm hidden md:block">Meu Carrinho</span>
+        </button>
+      </div>
+
       <div className="text-center mb-20">
         <h2 className="text-3xl md:text-5xl font-bold mb-6 text-zinc-100">
           Adquira suas Otacoins
@@ -105,7 +138,7 @@ export function PricingSection() {
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
         {plans.map((plan, index) => {
-          const isCenter = index === 1; // Mantém o destaque visual no segundo item por padrão visual
+          const isCenter = index === 1;
           return (
             <motion.div
               key={plan.id}
@@ -150,29 +183,111 @@ export function PricingSection() {
                   <Check size={18} className="text-primary shrink-0" />
                   <span>Alta Resolução (4K)</span>
                 </li>
-                <li className="flex items-start gap-3 text-sm text-zinc-300">
-                  <Check size={18} className="text-primary shrink-0" />
-                  <span>Duração vitalícia</span>
-                </li>
               </ul>
 
               <button 
-                onClick={() => handlePurchase(plan)}
-                disabled={buying}
+                onClick={() => {
+                  addToCart(plan);
+                  setIsCartOpen(true);
+                }}
                 className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
                   isCenter
-                    ? 'bg-primary hover:bg-primary-hover text-white shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)]'
+                    ? 'bg-primary hover:bg-primary-hover text-white shadow-[0_0_20px_rgba(139,92,246,0.4)]'
                     : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                }`}
               >
-                {buying ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} className={isCenter ? "text-white" : "text-primary"} />}
-                Comprar Pacote
+                <ShoppingCart size={18} className={isCenter ? "text-white" : "text-primary"} />
+                Adicionar ao Carrinho
               </button>
               
             </motion.div>
           );
         })}
       </div>
+
+      {/* Drawer do Carrinho */}
+      <AnimatePresence>
+        {isCartOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCartOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110]"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-zinc-950 border-l border-zinc-800 z-[120] p-8 shadow-2xl flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-10">
+                <h3 className="text-2xl font-black text-white flex items-center gap-3">
+                  <ShoppingCart className="text-primary" /> Meu Carrinho
+                </h3>
+                <button 
+                  onClick={() => setIsCartOpen(false)}
+                  className="p-2 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-500 hover:text-white"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-y-auto space-y-4 pr-2">
+                {items.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center gap-4 opacity-40">
+                    <ShoppingCart size={64} />
+                    <p className="font-bold">Seu carrinho está vazio.</p>
+                  </div>
+                ) : (
+                  items.map(item => (
+                    <div key={item.id} className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center group">
+                      <div>
+                        <h4 className="font-bold text-white mb-1">{item.name}</h4>
+                        <div className="flex items-center gap-4 text-xs font-medium">
+                          <span className="text-zinc-500">Qtd: {item.quantity}</span>
+                          <span className="text-primary">R$ {item.price.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => removeFromCart(item.id)}
+                        className="p-2 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {items.length > 0 && (
+                <div className="mt-8 pt-8 border-t border-zinc-800 flex flex-col gap-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Total Parcial</span>
+                    <span className="text-3xl font-black text-white">R$ {total.toFixed(2).replace('.', ',')}</span>
+                  </div>
+                  
+                  <button 
+                    onClick={handleCheckout}
+                    disabled={buying}
+                    className="w-full bg-primary hover:bg-primary-hover text-white py-5 rounded-3xl font-black uppercase tracking-widest flex justify-center items-center gap-3 shadow-[0_10px_20px_rgba(139,92,246,0.3)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {buying ? <Loader2 className="animate-spin" size={20} /> : <>Finalizar Compra <ArrowRight size={20} /></>}
+                  </button>
+
+                  <button 
+                    onClick={clearCart}
+                    className="text-[10px] font-bold text-zinc-600 hover:text-zinc-400 uppercase tracking-widest transition-colors w-fit mx-auto"
+                  >
+                    Limpar Carrinho
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Custom Option Area */}
       <motion.div 
@@ -218,11 +333,13 @@ export function PricingSection() {
                 </span>
               </div>
               <button 
-                disabled={buying}
-                onClick={() => handlePurchase({ name: 'Pacote Custom', amount: customPrice, otacoins: customCoins })}
-                className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/50 flex items-center gap-2 disabled:opacity-50"
+                onClick={() => {
+                  addToCart({ id: 999, name: 'Pacote Custom', price: customPrice, otacoins: customCoins });
+                  setIsCartOpen(true);
+                }}
+                className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/50 flex items-center gap-2"
               >
-                {buying ? <Loader2 size={16} className="animate-spin" /> : <>Comprar <Zap size={16} /></>}
+                Adicionar <ShoppingCart size={16} />
               </button>
             </div>
           </div>
