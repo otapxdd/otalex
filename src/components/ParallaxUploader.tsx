@@ -2,8 +2,10 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, File, Image as ImageIcon, X, CheckCircle, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 
 export function ParallaxUploader() {
+  const { error, warning } = useToast();
   const [otalexFile, setOtalexFile] = useState<File | null>(null);
   const [images, setImages] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -19,7 +21,8 @@ export function ParallaxUploader() {
       // Checa a extensão .otalex (ou para facilitar testes locais, deixamos passar se o nome incluir otalex)
       if (file.name.toLowerCase().endsWith('.otalex') || file.name.toLowerCase().includes('otalex')) {
         setOtalexFile(file);
-      } else {        alert('Por favor, selecione um arquivo de configuração (.otalex) válido.');
+      } else {
+        error('Selecione um arquivo de configuração válido (.otalex).');
       }
     }
   };
@@ -30,7 +33,7 @@ export function ParallaxUploader() {
       const remainingSlots = 3 - images.length;
       
       if (selectedFiles.length > remainingSlots) {
-        alert(`O projeto parallax suporta no máximo 3 imagens de camadas. Você só tem espaço para mais ${remainingSlots} imagem(ns).`);
+        warning(`Máximo de 3 camadas. Somente ${remainingSlots} imagem(ns) serão adicionadas.`);
       }
       
       const allowedFiles = selectedFiles.filter(f => f.type.startsWith('image/')).slice(0, remainingSlots);
@@ -49,7 +52,7 @@ export function ParallaxUploader() {
 
   const handleUpload = () => {
     if (!otalexFile || images.length === 0) {
-      alert('Selecione pelo menos o arquivo .otalex e 1 imagem (layer) para gerar o parallax.');
+      error('Selecione o arquivo .otalex e pelo menos 1 imagem de camada.');
       return;
     }
 

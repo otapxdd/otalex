@@ -3,9 +3,11 @@ import { KeyRound, ShoppingBag, CheckCircle, Clock, Image as ImageIcon, Edit2, L
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 export function UserDashboard() {
   const { user, login } = useAuth();
+  const { success } = useToast();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<{
     keys: any[],
@@ -119,7 +121,7 @@ export function UserDashboard() {
                     <button 
                       onClick={() => {
                          navigator.clipboard.writeText(k.license_key);
-                         alert("Key copiada com sucesso!");
+                         success('Key copiada para a área de transferência!');
                       }}
                       className="text-sm font-semibold text-primary hover:text-primary-hover flex items-center gap-1 group-hover:underline">
                       Copiar Key

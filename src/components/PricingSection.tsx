@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Coins, Loader2, ShoppingCart, Trash2, X, ArrowRight } from 'lucide-react';
+import { Check, Coins, Loader2, ShoppingCart, Trash2, X, ArrowRight, ChevronDown, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import { useToast } from '../contexts/ToastContext';
 
 export function PricingSection() {
-  const [customCoins, setCustomCoins] = useState(1000);
+  const [customCoins, setCustomCoins] = useState(10);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
   
   const { addToCart, itemCount } = useCart();
   
@@ -39,11 +42,37 @@ export function PricingSection() {
     fetchPlans();
   }, []);
 
-  const handleCoinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomCoins(Number(e.target.value));
+  // Calcula o preço por moeda com base em camadas derivadas dos planos
+  const getPricePerCoin = (quantity: number): number => {
+    const sorted = [...plans]
+      .filter(p => Number(p.otacoins) > 0 && Number(p.price) > 0)
+      .sort((a, b) => Number(a.otacoins) - Number(b.otacoins));
+
+    if (sorted.length === 0) return 0.05; // fallback: R$0.05/moeda
+
+    const smallestPlan = sorted[0];
+    const smallestRate = parseFloat(smallestPlan.price) / Number(smallestPlan.otacoins);
+    // Abaixo do menor plano: 30% mais caro por moeda
+    const microRate = smallestRate * 1.3;
+
+    // Verifica se bate exatamente em algum plano
+    let matched = null;
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if (quantity >= Number(sorted[i].otacoins)) {
+        matched = sorted[i];
+        break;
+      }
+    }
+    if (matched) return parseFloat(matched.price) / Number(matched.otacoins);
+
+    // Interpola entre microRate e o menor plano
+    const ratio = quantity / Number(smallestPlan.otacoins);
+    return microRate - (microRate - smallestRate) * ratio;
   };
-  
-  const customPrice = customCoins * 0.30;
+
+  const pricePerCoin = getPricePerCoin(customCoins);
+  const customPrice = parseFloat((customCoins * pricePerCoin).toFixed(2));
+  const customBelowMin = customPrice < 0.50;
 
   if (loading) {
     return (
@@ -153,61 +182,133 @@ export function PricingSection() {
           })}
         </div>
 
-        {/* Custom Option Area */}
-        <motion.div 
+        {/* Custom Option — Collapsível */}
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="max-w-4xl mx-auto glass-card flex flex-col md:flex-row items-center gap-10 p-10 rounded-[2rem] border-primary/20 relative overflow-hidden group"
+          className="max-w-4xl mx-auto"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5 group-hover:from-primary/10 group-hover:to-secondary/10 transition-colors" />
-          
-          <div className="w-full md:w-1/2 relative z-10 text-center md:text-left">
-            <h3 className="text-2xl font-bold text-zinc-100 mb-3">Opção Comum</h3>
-            <p className="text-zinc-400">Quer mais? Compre a quantidade exata de Otacoins que precisa.</p>
-          </div>
-
-          <div className="w-full md:w-1/2 relative z-10 flex flex-col gap-6">
-            <div className="bg-zinc-950/80 rounded-2xl p-6 border border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-zinc-400 font-medium">Quantidade:</span>
-                <div className="flex items-center gap-3 bg-zinc-900 px-4 py-2 rounded-lg border border-zinc-800">
-                  <Coins size={16} className="text-secondary" />
-                  <span className="text-xl font-bold text-zinc-100">{customCoins}</span>
-                </div>
+          {/* Toggle Button */}
+          <button
+            onClick={() => setShowCustom(v => !v)}
+            className="w-full glass-card border border-zinc-800 hover:border-primary/40 rounded-[2rem] p-6 flex items-center justify-between group transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Coins size={22} className="text-primary" />
               </div>
-
-              <input 
-                type="range" 
-                min="500" 
-                max="10000" 
-                step="100"
-                value={customCoins} 
-                onChange={handleCoinChange}
-                className="w-full accent-primary h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer mb-6"
-              />
-              
-              <div className="flex justify-between items-end border-t border-zinc-800/60 pt-6">
-                <div>
-                  <span className="block text-sm text-zinc-500 mb-1">Total (R$ 0,30 / unid)</span>
-                  <span className="text-3xl font-black text-zinc-100 flex items-center gap-1">
-                    <span className="text-xl text-zinc-500 font-medium">R$</span>
-                    {customPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <button 
-                  onClick={() => {
-                    addToCart({ id: 999, name: 'Pacote Custom', price: customPrice, otacoins: customCoins });
-                    setIsCartOpen(true);
-                  }}
-                  className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/50 flex items-center gap-2"
-                >
-                  Adicionar <ShoppingCart size={16} />
-                </button>
+              <div className="text-left">
+                <h3 className="text-lg font-bold text-zinc-100">Quantidade Customizada</h3>
+                <p className="text-zinc-500 text-sm">Escolha exatamente quantas Otacoins você quer</p>
               </div>
             </div>
-          </div>
+            <motion.div animate={{ rotate: showCustom ? 180 : 0 }} transition={{ duration: 0.3 }}>
+              <ChevronDown size={22} className="text-zinc-400 group-hover:text-primary transition-colors" />
+            </motion.div>
+          </button>
+
+          {/* Painel customizável */}
+          <AnimatePresence>
+            {showCustom && (
+              <motion.div
+                key="custom-panel"
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ duration: 0.35, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div className="glass-card rounded-[2rem] border border-zinc-800 p-8 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5" />
+
+                  <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center">
+
+                    {/* Coluna esquerda: input + slider */}
+                    <div className="w-full md:w-1/2 flex flex-col gap-6">
+                      <div>
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 block">Quantidade de Otacoins</label>
+                        <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-2xl px-5 py-4 focus-within:border-primary transition-colors">
+                          <Coins size={18} className="text-secondary shrink-0" />
+                          <input
+                            type="number"
+                            min={1}
+                            max={100000}
+                            value={customCoins}
+                            onChange={e => setCustomCoins(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="bg-transparent text-2xl font-black text-white w-full outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <span className="text-zinc-600 text-sm font-bold shrink-0">coins</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <input
+                          type="range"
+                          min={1}
+                          max={10000}
+                          step={1}
+                          value={customCoins}
+                          onChange={e => setCustomCoins(Number(e.target.value))}
+                          className="w-full accent-primary h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[10px] text-zinc-600 font-bold mt-1">
+                          <span>1</span>
+                          <span>10.000</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Coluna direita: resumo de preço */}
+                    <div className="w-full md:w-1/2 bg-zinc-950/80 rounded-2xl border border-zinc-800 p-6 flex flex-col gap-4">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-500 font-medium">Preço por moeda</span>
+                        <span className="text-primary font-bold font-mono">
+                          R$ {pricePerCoin.toFixed(4).replace('.', ',')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-500 font-medium">Quantidade</span>
+                        <span className="text-zinc-200 font-bold">{customCoins.toLocaleString('pt-BR')} coins</span>
+                      </div>
+                      <div className="border-t border-zinc-800 pt-4 flex justify-between items-end">
+                        <span className="text-zinc-500 text-xs font-black uppercase tracking-widest">Total</span>
+                        <span className={`text-3xl font-black leading-none ${
+                          customBelowMin ? 'text-red-400' : 'text-white'
+                        }`}>
+                          R$ {customPrice.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+
+                      {/* Aviso de valor mínimo */}
+                      {customBelowMin && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-xs text-red-400 font-medium"
+                        >
+                          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                          <span>O valor mínimo para pagamento é <strong>R$ 0,50</strong>. Adicione mais {Math.ceil(0.50 / pricePerCoin) - customCoins + 1} moedas para continuar.</span>
+                        </motion.div>
+                      )}
+
+                      <button
+                        disabled={customBelowMin}
+                        onClick={() => {
+                          addToCart({ id: 999, name: `Pacote Custom (${customCoins.toLocaleString('pt-BR')} coins)`, price: customPrice, otacoins: customCoins });
+                          setIsCartOpen(true);
+                        }}
+                        className="w-full bg-primary hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-primary/50 flex items-center justify-center gap-2 active:scale-95"
+                      >
+                        <ShoppingCart size={18} /> Adicionar ao Carrinho
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </section>
 
@@ -217,9 +318,10 @@ export function PricingSection() {
 }
 
 function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { items, removeFromCart, subtotal, total, itemCount, clearCart, applyCoupon, coupon } = useCart();
+  const { items, removeFromCart, subtotal, total, clearCart, applyCoupon, coupon } = useCart();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const { success, error, info } = useToast();
   const [couponInput, setCouponInput] = useState("");
   const [buying, setBuying] = useState(false);
 
@@ -232,11 +334,13 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
-  const handleApplyCoupon = () => {
-    if (applyCoupon(couponInput)) {
-      alert("Cupom aplicado!");
+  const handleApplyCoupon = async () => {
+    const result = await applyCoupon(couponInput);
+    if (result.success) {
+      success('Cupom aplicado com sucesso!');
+      setCouponInput('');
     } else {
-      alert("Cupom inválido.");
+      error(result.message || 'Cupom inválido.');
     }
   };
 
@@ -253,6 +357,7 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
     try {
       const planToBuy = items[0]; 
 
+      // Somente cupom de 100% bypassa o Mercado Pago
       if (total === 0) {
         const apiUrl = import.meta.env.PROD 
           ? 'https://agapesi.ddns.com.br/teste/api/dashboard.php' 
@@ -280,6 +385,15 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
         }
       }
 
+      // Mercado Pago não aceita valores abaixo de R$ 0,50:
+      // se o desconto baixou o valor mas não zerou, cobra o mínimo de R$ 0,50 e avisa
+      const effectiveTotal = (total > 0 && total < 0.50) ? 0.50 : total;
+      if (total > 0 && total < 0.50) {
+        info('O valor mínimo é R$ 0,50. Seu pagamento será cobrado nesse valor mínimo.', 6000);
+        // aguarda um momento para o usuário ler o aviso
+        await new Promise(r => setTimeout(r, 1500));
+      }
+
       const apiUrl = import.meta.env.PROD 
         ? 'https://agapesi.ddns.com.br/teste/api/mercadopago.php' 
         : 'http://localhost/otalex/api/mercadopago.php';
@@ -293,7 +407,7 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
           email: user.email,
           plan: {
             name: planToBuy.name,
-            price: total,
+            price: effectiveTotal,
             otacoins: planToBuy.otacoins
           }
         })
@@ -303,20 +417,20 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
       if (data.status === 'success' && data.init_point) {
         window.location.href = data.init_point;
       } else {
-        alert("Erro ao gerar pagamento: " + (data.message || "Erro desconhecido"));
+        error('Erro ao gerar pagamento: ' + (data.message || 'Erro desconhecido'));
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao conectar com servidor de pagamento.");
+      error('Erro ao conectar com o servidor de pagamento.');
     } finally {
       setBuying(false);
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[99991]">
+        <div className="fixed inset-0 z-[999999]">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -329,22 +443,24 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-            className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-zinc-950 border-l border-zinc-800 p-8 shadow-2xl flex flex-col"
+            className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col"
             style={{ willChange: 'transform' }}
           >
-            <div className="flex justify-between items-center mb-10">
-              <h3 className="text-2xl font-black text-white flex items-center gap-3">
-                <ShoppingCart className="text-primary" size={28} /> Carrinho
+            {/* Header fixo — sempre visível no topo mesmo no mobile */}
+            <div className="flex justify-between items-center px-6 py-5 border-b border-zinc-800 shrink-0 bg-zinc-950">
+              <h3 className="text-xl font-black text-white flex items-center gap-3">
+                <ShoppingCart className="text-primary" size={24} /> Carrinho
               </h3>
               <button 
                 onClick={onClose}
-                className="p-2 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-500 hover:text-white"
+                className="p-2 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-400 hover:text-white active:scale-90"
+                aria-label="Fechar carrinho"
               >
-                <X size={28} />
+                <X size={26} />
               </button>
             </div>
 
-            <div className="flex-grow overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+            <div className="flex-grow overflow-y-auto space-y-4 px-6 py-5 custom-scrollbar">
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center gap-4 opacity-40">
                   <ShoppingCart size={64} />
@@ -363,7 +479,7 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
                       </div>
                       <button 
                         onClick={() => removeFromCart(item.id)}
-                        className="p-3 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                        className="p-3 text-zinc-600 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-all hover:scale-110"
                       >
                         <Trash2 size={20} />
                       </button>
@@ -401,7 +517,7 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
             </div>
 
             {items.length > 0 && (
-              <div className="mt-8 pt-8 border-t border-zinc-800 flex flex-col gap-6">
+              <div className="px-6 pb-6 pt-5 border-t border-zinc-800 flex flex-col gap-5 shrink-0 bg-zinc-950">
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest opacity-40">
                     <span>Subtotal</span>
@@ -409,11 +525,11 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
                   </div>
                   {coupon && (
                     <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-green-500">
-                      <span>Desconto</span>
-                      <span>- R$ {subtotal.toFixed(2).replace('.', ',')}</span>
+                      <span>Desconto ({coupon.type === 'percentage' ? `${(coupon.discount * 100).toFixed(0)}%` : 'fixo'})</span>
+                      <span>- R$ {(subtotal - total).toFixed(2).replace('.', ',')}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-end mt-2 pt-4 border-t border-zinc-900">
+                  <div className="flex justify-between items-end mt-1 pt-3 border-t border-zinc-900">
                     <span className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">Total</span>
                     <span className="text-4xl font-black text-white leading-none">R$ {total.toFixed(2).replace('.', ',')}</span>
                   </div>
@@ -422,14 +538,14 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
                 <button 
                   onClick={handleCheckout}
                   disabled={buying}
-                  className="w-full bg-white text-black hover:bg-zinc-200 py-6 rounded-[2rem] font-black uppercase tracking-tighter text-lg flex justify-center items-center gap-3 shadow-[0_15px_40px_rgba(255,255,255,0.1)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                  className="w-full bg-white text-black hover:bg-zinc-200 py-5 rounded-[2rem] font-black uppercase tracking-tighter text-lg flex justify-center items-center gap-3 shadow-[0_15px_40px_rgba(255,255,255,0.1)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                 >
                   {buying ? <Loader2 className="animate-spin" size={24} /> : <>{total === 0 ? 'Resgatar Agora' : 'Finalizar Compra'} <ArrowRight size={24} /></>}
                 </button>
 
                 <button 
                   onClick={clearCart}
-                  className="text-[10px] font-black text-zinc-600 hover:text-zinc-400 uppercase tracking-[0.2em] transition-colors w-fit mx-auto mt-2"
+                  className="text-[10px] font-black text-zinc-600 hover:text-zinc-400 uppercase tracking-[0.2em] transition-colors w-fit mx-auto"
                 >
                   Limpar Carrinho
                 </button>
@@ -438,6 +554,7 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
