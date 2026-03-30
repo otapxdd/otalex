@@ -22,6 +22,8 @@ export function AdminPage() {
 
   // Edit Plans State
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editCoins, setEditCoins] = useState("");
 
@@ -129,6 +131,8 @@ export function AdminPage() {
          body: JSON.stringify({ 
            action: 'update_plan', 
            id: id,
+           name: editName,
+           description: editDesc,
            price: parseFloat(editPrice),
            otacoins: parseInt(editCoins)
          })
@@ -413,43 +417,34 @@ export function AdminPage() {
                 <h2 className="text-2xl font-bold text-white mb-6 tracking-tight">Configurar Planos de Venda</h2>
                 <div className="grid gap-6">
                   {plansList.map((plan) => (
-                    <div key={plan.id} className="bg-zinc-950/50 border border-zinc-800 p-8 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-primary/30 transition-all relative overflow-hidden backdrop-blur-sm">
-                      <div className="flex-1">
-                         <div className="flex items-center gap-3 mb-2">
-                           <h3 className="text-2xl font-black text-white">{plan.name}</h3>
-                           {plan.is_popular && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-primary/20">Popular</span>}
-                         </div>
-                         <p className="text-zinc-500 text-sm font-medium">{plan.description}</p>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row items-center gap-6 w-full md:w-auto">
-                         <div className="flex flex-col gap-2 w-full sm:w-36">
-                           <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Preço (R$)</span>
-                           <div className="relative">
-                              <input 
-                                disabled={editingPlanId !== plan.id}
-                                value={editingPlanId === plan.id ? editPrice : plan.price}
-                                onChange={e => setEditPrice(e.target.value)}
-                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-white font-bold focus:border-primary outline-none disabled:opacity-50 transition-all"
-                              />
-                              <DollarSign size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600" />
-                           </div>
-                         </div>
-
-                         <div className="flex flex-col gap-2 w-full sm:w-36">
-                           <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Otacoins</span>
-                           <div className="relative">
-                              <input 
-                                disabled={editingPlanId !== plan.id}
-                                value={editingPlanId === plan.id ? editCoins : plan.otacoins}
-                                onChange={e => setEditCoins(e.target.value)}
-                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-white font-bold focus:border-primary outline-none disabled:opacity-50 transition-all"
-                              />
-                              <Coins size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary" />
-                           </div>
+                    <div key={plan.id} className="bg-zinc-950/50 border border-zinc-800 p-8 rounded-[2rem] flex flex-col group hover:border-primary/30 transition-all relative overflow-hidden backdrop-blur-sm">
+                      
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                         <div className="flex-1 w-full">
+                            {editingPlanId === plan.id ? (
+                               <div className="flex flex-col gap-3">
+                                  <input 
+                                     value={editName}
+                                     onChange={e => setEditName(e.target.value)}
+                                     placeholder="Nome do Plano"
+                                     className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-white font-black text-xl focus:border-primary outline-none"
+                                  />
+                                  <textarea 
+                                     value={editDesc}
+                                     onChange={e => setEditDesc(e.target.value)}
+                                     placeholder="Descrição do Plano"
+                                     className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-zinc-400 text-sm focus:border-primary outline-none min-h-[80px]"
+                                  />
+                               </div>
+                            ) : (
+                               <div>
+                                  <h3 className="text-2xl font-black text-white mb-1">{plan.name}</h3>
+                                  <p className="text-zinc-500 text-sm font-medium">{plan.description}</p>
+                               </div>
+                            )}
                          </div>
 
-                         <div className="flex gap-2 w-full sm:w-auto mt-6">
+                         <div className="flex gap-2 w-full md:w-auto self-end md:self-center">
                             {editingPlanId === plan.id ? (
                                <button 
                                   onClick={() => handleUpdatePlan(plan.id)}
@@ -461,6 +456,8 @@ export function AdminPage() {
                                <button 
                                   onClick={() => {
                                      setEditingPlanId(plan.id);
+                                     setEditName(plan.name);
+                                     setEditDesc(plan.description);
                                      setEditPrice(plan.price);
                                      setEditCoins(plan.otacoins);
                                   }}
@@ -469,6 +466,34 @@ export function AdminPage() {
                                   <Edit3 size={20} />
                                </button>
                             )}
+                         </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center gap-6 w-full pt-4 border-t border-zinc-800">
+                         <div className="flex flex-col gap-2 w-full sm:w-1/2">
+                           <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Preço Sugerido (R$)</span>
+                           <div className="relative">
+                              <input 
+                                disabled={editingPlanId !== plan.id}
+                                value={editingPlanId === plan.id ? editPrice : plan.price}
+                                onChange={e => setEditPrice(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-white font-bold focus:border-primary outline-none disabled:opacity-50 transition-all"
+                              />
+                              <DollarSign size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600" />
+                           </div>
+                         </div>
+
+                         <div className="flex flex-col gap-2 w-full sm:w-1/2">
+                           <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Otacoins Incluídas</span>
+                           <div className="relative">
+                              <input 
+                                disabled={editingPlanId !== plan.id}
+                                value={editingPlanId === plan.id ? editCoins : plan.otacoins}
+                                onChange={e => setEditCoins(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-white font-bold focus:border-primary outline-none disabled:opacity-50 transition-all"
+                              />
+                              <Coins size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary" />
+                           </div>
                          </div>
                       </div>
                     </div>
@@ -557,4 +582,5 @@ export function AdminPage() {
     </div>
   );
 }
+
 
