@@ -63,7 +63,6 @@ export function PricingSection() {
     try {
       const planToBuy = items[0]; 
 
-      // Se o total for zero (Cupom 100% OFF), ignora Mercado Pago e processa direto
       if (total === 0) {
         const apiUrl = import.meta.env.PROD 
           ? 'https://agapesi.ddns.com.br/teste/api/dashboard.php' 
@@ -83,8 +82,10 @@ export function PricingSection() {
 
         const data = await res.json();
         if (data.status === 'success') {
+           const key = data.key;
            clearCart();
-           navigate('/success', { state: { licenseKey: data.key } });
+           setIsCartOpen(false); // Fecha o carrinho antes de navegar
+           navigate('/success', { state: { licenseKey: key } });
            return;
         }
       }
@@ -103,7 +104,7 @@ export function PricingSection() {
           email: user.email,
           plan: {
             name: planToBuy.name,
-            price: total, // Envia o preço final com desconto
+            price: total,
             otacoins: planToBuy.otacoins
           }
         })
@@ -251,6 +252,8 @@ export function PricingSection() {
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              style={{ willChange: 'transform' }}
               className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-zinc-950 border-l border-zinc-800 z-[120] p-8 shadow-2xl flex flex-col"
             >
               <div className="flex justify-between items-center mb-10">

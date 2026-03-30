@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { CheckCircle, Download, KeyRound, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { CheckCircle, Download, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 
 export function SuccessPage() {
-  const generatedKey = 'X9V2-L4KP-78W1'; // Mock key
+  const location = useLocation();
+  const generatedKey = location.state?.licenseKey;
 
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 container mx-auto flex flex-col items-center justify-center">
@@ -27,32 +28,47 @@ export function SuccessPage() {
         </p>
 
         <div className="w-full bg-zinc-950/50 border border-zinc-800 rounded-2xl p-6 mb-8 text-left">
-          <div className="mb-6">
-            <span className="text-xs uppercase font-semibold text-zinc-500 tracking-wider flex items-center gap-2 mb-2">
-              <KeyRound size={16} /> Sua License Key
-            </span>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-200 font-mono text-lg px-4 py-3 rounded-xl tracking-wider select-all cursor-text flex items-center justify-center sm:justify-start">
-                {generatedKey}
+          {generatedKey ? (
+            <div className="mb-6">
+              <span className="text-xs uppercase font-semibold text-zinc-500 tracking-wider flex items-center gap-2 mb-2">
+                <KeyRound size={16} /> Sua License Key
+              </span>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-200 font-mono text-lg px-4 py-3 rounded-xl tracking-wider select-all cursor-text flex items-center justify-center sm:justify-start overflow-hidden text-ellipsis whitespace-nowrap">
+                  {generatedKey}
+                </div>
+                <button 
+                  onClick={() => navigator.clipboard.writeText(generatedKey)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-medium transition-colors whitespace-nowrap"
+                >
+                  Copiar
+                </button>
               </div>
-              <button 
-                onClick={() => navigator.clipboard.writeText(generatedKey)}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-medium transition-colors whitespace-nowrap"
-              >
-                Copiar
-              </button>
+              <p className="text-xs text-zinc-500 mt-2">Guarde esta chave. Você vai precisar dela para ativar o Otalex no After Effects.</p>
             </div>
-            <p className="text-xs text-zinc-500 mt-2">Guarde esta chave. Você vai precisar dela para ativar o Otalex no After Effects.</p>
-          </div>
+          ) : (
+             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-4">
+                <AlertCircle className="text-red-400 shrink-0" size={24} />
+                <div>
+                   <h4 className="font-bold text-red-100 text-sm">Chave não encontrada</h4>
+                   <p className="text-xs text-red-300 opacity-80 mt-1">Houve um problema ao recuperar sua chave. Por favor, verifique seu painel ou entre em contato com o suporte.</p>
+                </div>
+             </div>
+          )}
 
           <div className="border-t border-zinc-800/60 pt-6">
             <span className="text-xs uppercase font-semibold text-zinc-500 tracking-wider flex items-center gap-2 mb-3">
               <Download size={16} /> Arquivos do Projeto
             </span>
-            <button className="w-full bg-primary hover:bg-primary-hover text-white px-6 py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center gap-2" onClick={() => alert("Simulação de download inciada =)")}>
+            <a 
+              href="https://agapesi.ddns.com.br/teste/otalex_v1.zip" 
+              target="_blank"
+              rel="noreferrer"
+              className="w-full bg-primary hover:bg-primary-hover text-white px-6 py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center gap-2"
+            >
                Baixar Script Otalex v1.0.zip
                <Download size={18} />
-            </button>
+            </a>
           </div>
         </div>
 
