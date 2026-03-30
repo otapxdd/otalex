@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, DollarSign, Key, BarChart3, Plus, Search, X, Zap, PowerOff, CheckCircle2, Loader2, Coins } from 'lucide-react';
+import { Users, DollarSign, Key, BarChart3, Plus, Search, X, Zap, PowerOff, CheckCircle2, Loader2, Coins, Edit3, Save } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'keys' | 'users' | 'sales'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'keys' | 'users' | 'sales' | 'plans'>('overview');
   const [isCreateKeyModalOpen, setIsCreateKeyModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -13,11 +13,17 @@ export function AdminPage() {
   const [licenses, setLicenses] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [salesList, setSalesList] = useState<any[]>([]);
+  const [plansList, setPlansList] = useState<any[]>([]);
   
   // Form State para Nova Key
   const [newKeyPlan, setNewKeyPlan] = useState('Personalizado');
   const [newKeyCredits, setNewKeyCredits] = useState<number>(50);
   const [creatingKey, setCreatingKey] = useState(false);
+
+  // Edit Plans State
+  const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
+  const [editPrice, setEditPrice] = useState("");
+  const [editCoins, setEditCoins] = useState("");
 
   const fetchAdminData = async () => {
     try {
@@ -55,6 +61,18 @@ export function AdminPage() {
         setUsersList(lists.users || []);
         setSalesList(lists.sales || []);
       }
+
+      // Carregar Planos
+      const plansRes = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_plans' })
+      });
+      const plansData = await plansRes.json();
+      if (plansData.status === 'success') {
+         setPlansList(plansData.plans || []);
+      }
+
     } catch (err) {
       console.error("Erro ao buscar dados admin:", err);
     } finally {
@@ -99,9 +117,35 @@ export function AdminPage() {
     }
   };
 
+  const handleUpdatePlan = async (id: number) => {
+     try {
+       const apiUrl = import.meta.env.PROD 
+         ? 'https://agapesi.ddns.com.br/teste/api/admin.php' 
+         : 'http://localhost/otalex/api/admin.php';
+
+       const res = await fetch(apiUrl, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ 
+           action: 'update_plan', 
+           id: id,
+           price: parseFloat(editPrice),
+           otacoins: parseInt(editCoins)
+         })
+       });
+
+       const data = await res.json();
+       if (data.status === 'success') {
+          alert("Plano atualizado!");
+          setEditingPlanId(null);
+          fetchAdminData();
+       }
+     } catch (err) {
+        console.error(err);
+     }
+  };
+
   const toggleKeyStatus = async (id: string, currentStatus: string) => {
-    // Integração simplificada de toggle por enquanto, apenas alterando local
-    // No mundo real teria um update_key_status no admin.php
     alert("Status alternado de " + id + " para " + (currentStatus === 'ativa' ? 'inativa' : 'ativa'));
   };
 
@@ -120,9 +164,9 @@ export function AdminPage() {
       <div className="w-full max-w-7xl flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
           <h1 className="text-4xl font-bold text-zinc-100 flex items-center gap-3">
-            Admin Dashboard <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full uppercase tracking-wider font-bold">Otalex v1.1 - Live</span>
+            Admin Dashboard <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full uppercase tracking-wider font-bold">Otalex v1.2 - Live</span>
           </h1>
-          <p className="text-zinc-400 mt-2">Visão geral do negócio, gerenciamento de licenças e usuários em tempo real.</p>
+          <p className="text-zinc-400 mt-2">Visão geral do negócio e controle total da plataforma.</p>
         </div>
         <Link to="/" className="bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 px-6 py-2.5 rounded-xl font-medium transition-colors text-sm shadow-md">
           Sair do Painel
@@ -133,22 +177,26 @@ export function AdminPage() {
         
         {/* Sidebar Nav */}
         <div className="w-full lg:w-64 flex flex-col gap-2">
-          {['overview', 'keys', 'users', 'sales'].map((tab) => {
-             const labels: Record<string, string> = { overview: 'Visão Geral', keys: 'Gerenciar Keys', users: 'Usuários', sales: 'Vendas' };
-             const icons: Record<string, any> = { overview: BarChart3, keys: Key, users: Users, sales: DollarSign };
-             const Icon = icons[tab];
+          {[
+            { id: 'overview', label: 'Visão Geral', icon: BarChart3 },
+            { id: 'keys', label: 'Gerenciar Keys', icon: Key },
+            { id: 'users', label: 'Usuários', icon: Users },
+            { id: 'sales', label: 'Vendas', icon: DollarSign },
+            { id: 'plans', label: 'Configurar Planos', icon: Zap }
+          ].map((tab) => {
+             const Icon = tab.icon;
              return (
               <button 
-                key={tab}
-                onClick={() => setActiveTab(tab as any)}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
-                   activeTab === tab 
+                   activeTab === tab.id 
                     ? 'bg-primary/10 text-primary border border-primary/20 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'
                 }`}
               >
                 <Icon size={18} />
-                {labels[tab]}
+                {tab.label}
               </button>
              );
           })}
@@ -359,6 +407,76 @@ export function AdminPage() {
               </motion.div>
             )}
 
+            {/* PLANS TAB */}
+            {activeTab === 'plans' && (
+              <motion.div key="plans" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}}>
+                <h2 className="text-2xl font-bold text-white mb-6 tracking-tight">Configurar Planos de Venda</h2>
+                <div className="grid gap-6">
+                  {plansList.map((plan) => (
+                    <div key={plan.id} className="bg-zinc-950/50 border border-zinc-800 p-8 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-primary/30 transition-all relative overflow-hidden backdrop-blur-sm">
+                      <div className="flex-1">
+                         <div className="flex items-center gap-3 mb-2">
+                           <h3 className="text-2xl font-black text-white">{plan.name}</h3>
+                           {plan.is_popular && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-primary/20">Popular</span>}
+                         </div>
+                         <p className="text-zinc-500 text-sm font-medium">{plan.description}</p>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center gap-6 w-full md:w-auto">
+                         <div className="flex flex-col gap-2 w-full sm:w-36">
+                           <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Preço (R$)</span>
+                           <div className="relative">
+                              <input 
+                                disabled={editingPlanId !== plan.id}
+                                value={editingPlanId === plan.id ? editPrice : plan.price}
+                                onChange={e => setEditPrice(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-white font-bold focus:border-primary outline-none disabled:opacity-50 transition-all"
+                              />
+                              <DollarSign size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600" />
+                           </div>
+                         </div>
+
+                         <div className="flex flex-col gap-2 w-full sm:w-36">
+                           <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Otacoins</span>
+                           <div className="relative">
+                              <input 
+                                disabled={editingPlanId !== plan.id}
+                                value={editingPlanId === plan.id ? editCoins : plan.otacoins}
+                                onChange={e => setEditCoins(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-white font-bold focus:border-primary outline-none disabled:opacity-50 transition-all"
+                              />
+                              <Coins size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary" />
+                           </div>
+                         </div>
+
+                         <div className="flex gap-2 w-full sm:w-auto mt-6">
+                            {editingPlanId === plan.id ? (
+                               <button 
+                                  onClick={() => handleUpdatePlan(plan.id)}
+                                  className="bg-green-600 hover:bg-green-500 text-white p-4 rounded-2xl transition-all shadow-lg shadow-green-900/20 active:scale-95"
+                               >
+                                  <Save size={20} />
+                               </button>
+                            ) : (
+                               <button 
+                                  onClick={() => {
+                                     setEditingPlanId(plan.id);
+                                     setEditPrice(plan.price);
+                                     setEditCoins(plan.otacoins);
+                                  }}
+                                  className="bg-zinc-800 hover:bg-zinc-700 text-primary p-4 rounded-2xl transition-all active:scale-95 border border-zinc-700"
+                               >
+                                  <Edit3 size={20} />
+                               </button>
+                            )}
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
           </AnimatePresence>
         </div>
 
@@ -392,17 +510,20 @@ export function AdminPage() {
 
                  <form onSubmit={handleCreateKey} className="flex flex-col gap-6">
                     <div>
-                       <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] ml-1 mb-2.5 block">Tipo de Plano</label>
+                       <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] ml-1 mb-2.5 block">Selecione o Plano Base</label>
                        <select 
                           value={newKeyPlan}
-                          onChange={e => setNewKeyPlan(e.target.value)}
+                          onChange={e => {
+                             setNewKeyPlan(e.target.value);
+                             const p = plansList.find(pl => pl.name === e.target.value);
+                             if (p) setNewKeyCredits(p.otacoins);
+                          }}
                           className="w-full bg-zinc-900/50 border border-zinc-800 text-zinc-100 px-5 py-4 rounded-2xl focus:border-primary outline-none transition-all cursor-pointer hover:bg-zinc-900"
                        >
                           <option>Personalizado</option>
-                          <option>Pacote Nizi</option>
-                          <option>Pacote Mirt</option>
-                          <option>Pacote Nescoh</option>
-                          <option>PRO Mensal</option>
+                          {plansList.map(p => (
+                             <option key={p.id} value={p.name}>{p.name}</option>
+                          ))}
                        </select>
                     </div>
 
@@ -418,7 +539,6 @@ export function AdminPage() {
                           />
                           <Zap size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-secondary" />
                        </div>
-                       <span className="text-[11px] text-zinc-500 font-medium ml-1 mt-2.5 block italic">Cada renderização final gasta 1 crédito da chave.</span>
                     </div>
 
                     <button 
