@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { KeyRound, ShoppingBag, CheckCircle, Clock, Image as ImageIcon, Edit2, Loader2 } from 'lucide-react';
+import { KeyRound, ShoppingBag, CheckCircle, Clock, Image as ImageIcon, Edit2, Loader2, Download, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,7 @@ export function UserDashboard() {
     transactions: any[],
     projects: any[]
   }>({ keys: [], transactions: [], projects: [] });
+  const [pluginParams, setPluginParams] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function loadDashboard() {
@@ -53,12 +54,38 @@ export function UserDashboard() {
     loadDashboard();
   }, [user]);
 
+  useEffect(() => {
+    async function loadPluginParams() {
+      try {
+        const apiUrl = import.meta.env.PROD
+          ? 'https://agapesi.ddns.com.br/teste/api/plugin.php'
+          : 'http://localhost/otalex/api/plugin.php';
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        if (data.status === 'success') setPluginParams(data.params || {});
+      } catch (err) {
+        console.error('Erro ao carregar params do plugin:', err);
+      }
+    }
+    loadPluginParams();
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="animate-spin text-primary w-12 h-12" />
       </div>
     );
+  }
+
+  // Converte links do Google Drive para download direto
+  // Suporta formatos: /file/d/ID/view e drive.google.com/open?id=ID
+  function convertDriveLink(url: string): string {
+    const matchFile = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchFile) return `https://drive.google.com/uc?export=download&id=${matchFile[1]}`;
+    const matchOpen = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (matchOpen) return `https://drive.google.com/uc?export=download&id=${matchOpen[1]}`;
+    return url; // Retorna o URL original se não for do Drive
   }
 
   return (
@@ -81,6 +108,56 @@ export function UserDashboard() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
+
+        {/* Card de Download do Plugin */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-2"
+        >
+          <div className="relative overflow-hidden rounded-[2rem] border border-primary/30 bg-gradient-to-br from-primary/10 via-zinc-900 to-zinc-950 p-8 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl shadow-primary/5">
+            {/* Glow decorativo */}
+            <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-16 -right-16 w-56 h-56 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="p-5 rounded-[1.5rem] bg-primary/20 text-primary shadow-xl shadow-primary/20">
+                <Download size={32} />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h2 className="text-2xl font-black text-white">Otalex Plugin</h2>
+                  {pluginParams.versao_atual && (
+                    <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-primary/20 text-primary px-3 py-1 rounded-full border border-primary/30">
+                      <Tag size={10} />
+                      v{pluginParams.versao_atual}
+                    </span>
+                  )}
+                </div>
+                <p className="text-zinc-400 text-sm">Baixe o plugin para After Effects e ative com sua license key.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 relative z-10 flex-shrink-0">
+              {pluginParams.link_download ? (
+                <a
+                  href={convertDriveLink(pluginParams.link_download)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-[1.5rem] font-black uppercase text-sm tracking-widest shadow-xl shadow-primary/30 transition-all active:scale-95 group"
+                >
+                  <Download size={18} className="group-hover:-translate-y-0.5 transition-transform" />
+                  Baixar Plugin
+                </a>
+              ) : (
+                <div className="flex items-center gap-2 text-zinc-600 text-sm">
+                  <Loader2 size={16} className="animate-spin" />
+                  Carregando link...
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
         
         {/* Minhas Keys Section */}
         <motion.div 

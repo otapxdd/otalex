@@ -34,7 +34,7 @@ export function Navbar() {
   const navLinks = [
     { label: 'Início', href: '/#hero' },
     { label: 'Planos', href: '/#pricing' },
-    { label: 'Galeria', href: '/#gallery' },
+    { label: 'Galeria', href: '/gallery' },
     { label: 'Testar Licença', href: '/#dashboard' }
   ];
 

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, DollarSign, Key, BarChart3, Plus, Search, X, Zap, PowerOff, CheckCircle2, Loader2, Coins, Edit3, Save, Ticket, Trash2, Calendar, Percent } from 'lucide-react';
+import { Users, DollarSign, Key, BarChart3, Plus, Search, X, Zap, PowerOff, CheckCircle2, Loader2, Coins, Edit3, Save, Ticket, Trash2, Calendar, Percent, MessageSquare, ToggleLeft, ToggleRight, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
 export function AdminPage() {
   const { success, warning } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'keys' | 'users' | 'sales' | 'plans' | 'coupons'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'keys' | 'users' | 'sales' | 'plans' | 'coupons' | 'prompts' | 'params'>('overview');
   const [isCreateKeyModalOpen, setIsCreateKeyModalOpen] = useState(false);
   const [isCreateCouponModalOpen, setIsCreateCouponModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -18,6 +18,8 @@ export function AdminPage() {
   const [salesList, setSalesList] = useState<any[]>([]);
   const [plansList, setPlansList] = useState<any[]>([]);
   const [couponsList, setCouponsList] = useState<any[]>([]);
+  const [promptsList, setPromptsList] = useState<any[]>([]);
+  const [paramsList, setParamsList] = useState<any[]>([]);
   
   // Form State para Nova Key
   const [newKeyPlan, setNewKeyPlan] = useState('Personalizado');
@@ -39,6 +41,25 @@ export function AdminPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editCoins, setEditCoins] = useState("");
+
+  // Prompts State
+  const [editingPromptId, setEditingPromptId] = useState<number | null>(null);
+  const [editPromptNome, setEditPromptNome] = useState("");
+  const [editPromptTexto, setEditPromptTexto] = useState("");
+  const [savingPrompt, setSavingPrompt] = useState(false);
+  const [isCreatePromptModalOpen, setIsCreatePromptModalOpen] = useState(false);
+  const [newPromptNome, setNewPromptNome] = useState("");
+  const [newPromptTexto, setNewPromptTexto] = useState("");
+  const [creatingPrompt, setCreatingPrompt] = useState(false);
+
+  // Params Plugin State
+  const [editingParamKey, setEditingParamKey] = useState<string | null>(null);
+  const [editParamValor, setEditParamValor] = useState("");
+  const [savingParam, setSavingParam] = useState(false);
+  const [isCreateParamModalOpen, setIsCreateParamModalOpen] = useState(false);
+  const [newParamChave, setNewParamChave] = useState("");
+  const [newParamValor, setNewParamValor] = useState("");
+  const [creatingParam, setCreatingParam] = useState(false);
 
   const fetchAdminData = async () => {
     try {
@@ -92,6 +113,24 @@ export function AdminPage() {
       });
       const couponsData = await couponsRes.json();
       if (couponsData.status === 'success') setCouponsList(couponsData.coupons || []);
+
+      // 5. Prompts
+      const promptsRes = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_prompts' })
+      });
+      const promptsData = await promptsRes.json();
+      if (promptsData.status === 'success') setPromptsList(promptsData.prompts || []);
+
+      // 6. Params Plugin
+      const paramsRes = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_params' })
+      });
+      const paramsData = await paramsRes.json();
+      if (paramsData.status === 'success') setParamsList(paramsData.params || []);
 
     } catch (err) {
       console.error(err);
@@ -186,6 +225,119 @@ export function AdminPage() {
      } catch (err) { console.error(err); }
   };
 
+  const handleSavePrompt = async (prompt: any) => {
+    setSavingPrompt(true);
+    try {
+      const apiUrl = import.meta.env.PROD
+        ? 'https://agapesi.ddns.com.br/teste/api/admin.php'
+        : 'http://localhost/otalex/api/admin.php';
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_prompt', id: prompt.id, nome: editPromptNome, texto: editPromptTexto, ativo: prompt.ativo })
+      });
+      if ((await res.json()).status === 'success') {
+        success('Prompt atualizado com sucesso!');
+        setEditingPromptId(null);
+        fetchAdminData();
+      }
+    } catch (err) { console.error(err); }
+    finally { setSavingPrompt(false); }
+  };
+
+  const handleTogglePrompt = async (prompt: any) => {
+    try {
+      const apiUrl = import.meta.env.PROD
+        ? 'https://agapesi.ddns.com.br/teste/api/admin.php'
+        : 'http://localhost/otalex/api/admin.php';
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_prompt', id: prompt.id, nome: prompt.nome, texto: prompt.texto, ativo: !prompt.ativo })
+      });
+      prompt.ativo ? warning('Prompt desativado.') : success('Prompt ativado!');
+      fetchAdminData();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCreatePrompt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingPrompt(true);
+    try {
+      const apiUrl = import.meta.env.PROD
+        ? 'https://agapesi.ddns.com.br/teste/api/admin.php'
+        : 'http://localhost/otalex/api/admin.php';
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_prompt', nome: newPromptNome, texto: newPromptTexto, ativo: true })
+      });
+      if ((await res.json()).status === 'success') {
+        success('Prompt criado com sucesso!');
+        setIsCreatePromptModalOpen(false);
+        setNewPromptNome("");
+        setNewPromptTexto("");
+        fetchAdminData();
+      }
+    } catch (err) { console.error(err); }
+    finally { setCreatingPrompt(false); }
+  };
+
+  // ── Parâmetros do Plugin ──────────────────────────────────────
+  const apiUrl = import.meta.env.PROD
+    ? 'https://agapesi.ddns.com.br/teste/api/admin.php'
+    : 'http://localhost/otalex/api/admin.php';
+
+  const handleSaveParam = async (chave: string) => {
+    setSavingParam(true);
+    try {
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_param', chave, valor: editParamValor })
+      });
+      if ((await res.json()).status === 'success') {
+        success('Parâmetro atualizado!');
+        setEditingParamKey(null);
+        fetchAdminData();
+      }
+    } catch (err) { console.error(err); }
+    finally { setSavingParam(false); }
+  };
+
+  const handleDeleteParam = async (chave: string) => {
+    if (!confirm(`Excluir o parâmetro "${chave}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_param', chave })
+      });
+      warning(`Parâmetro "${chave}" removido.`);
+      fetchAdminData();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCreateParam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingParam(true);
+    try {
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_param', chave: newParamChave, valor: newParamValor })
+      });
+      if ((await res.json()).status === 'success') {
+        success('Parâmetro criado com sucesso!');
+        setIsCreateParamModalOpen(false);
+        setNewParamChave("");
+        setNewParamValor("");
+        fetchAdminData();
+      }
+    } catch (err) { console.error(err); }
+    finally { setCreatingParam(false); }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary w-16 h-16" /></div>;
 
   return (
@@ -208,7 +360,9 @@ export function AdminPage() {
             { id: 'users', label: 'Usuários', icon: Users },
             { id: 'sales', label: 'Vendas', icon: DollarSign },
             { id: 'plans', label: 'Planos', icon: Zap },
-            { id: 'coupons', label: 'Cupons', icon: Ticket }
+            { id: 'coupons', label: 'Cupons', icon: Ticket },
+            { id: 'prompts', label: 'Prompts IA', icon: MessageSquare },
+            { id: 'params', label: 'Parâmetros', icon: SlidersHorizontal }
           ].map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-3 px-6 py-4 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] transition-all ${activeTab === tab.id ? 'bg-primary text-white shadow-xl shadow-primary/30' : 'text-zinc-500 hover:text-white hover:bg-zinc-900'}`}>
                 <tab.icon size={16} /> {tab.label}
@@ -332,6 +486,208 @@ export function AdminPage() {
                 </motion.div>
             )}
 
+            {activeTab === 'prompts' && (
+              <motion.div key="prompts" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+                <div className="flex justify-between items-center mb-10">
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tighter">Prompts da IA</h2>
+                    <p className="text-zinc-500 text-sm mt-1 font-medium">Configure os prompts enviados para a API de análise de imagem.</p>
+                  </div>
+                  <button onClick={() => setIsCreatePromptModalOpen(true)} className="bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.2em] flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95">
+                    <Plus size={16} /> Novo Prompt
+                  </button>
+                </div>
+
+                <div className="grid gap-8">
+                  {promptsList.map((p) => (
+                    <div key={p.id} className={`bg-zinc-900 border ${p.ativo ? 'border-zinc-800' : 'border-red-900/40 opacity-60'} p-8 rounded-[2.5rem] transition-all`}>
+                      
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className={`p-4 rounded-[1.5rem] ${p.ativo ? 'bg-primary/20 text-primary' : 'bg-zinc-800 text-zinc-600'} shadow-inner`}>
+                            <MessageSquare size={22} />
+                          </div>
+                          <div>
+                            {editingPromptId === p.id ? (
+                              <input
+                                value={editPromptNome}
+                                onChange={e => setEditPromptNome(e.target.value)}
+                                className="bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2 text-white font-black text-lg outline-none focus:border-primary"
+                              />
+                            ) : (
+                              <h3 className="text-xl font-black text-white">{p.nome}</h3>
+                            )}
+                            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest mt-0.5">ID #{p.id}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {/* Toggle ativo */}
+                          <button
+                            onClick={() => handleTogglePrompt(p)}
+                            className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all active:scale-90 ${
+                              p.ativo
+                                ? 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
+                                : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
+                            }`}
+                          >
+                            {p.ativo ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                            {p.ativo ? 'Ativo' : 'Inativo'}
+                          </button>
+
+                          {/* Editar / Salvar */}
+                          <button
+                            onClick={() => {
+                              if (editingPromptId === p.id) {
+                                handleSavePrompt(p);
+                              } else {
+                                setEditingPromptId(p.id);
+                                setEditPromptNome(p.nome);
+                                setEditPromptTexto(p.texto);
+                              }
+                            }}
+                            className={`p-4 rounded-[1.5rem] transition-all shadow-xl active:scale-90 border ${
+                              editingPromptId === p.id
+                                ? 'bg-green-600 text-white border-green-600'
+                                : 'bg-primary/20 text-primary border-primary/20'
+                            }`}
+                          >
+                            {editingPromptId === p.id
+                              ? (savingPrompt ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />)
+                              : <Edit3 size={20} />}
+                          </button>
+
+                          {/* Cancelar edição */}
+                          {editingPromptId === p.id && (
+                            <button
+                              onClick={() => setEditingPromptId(null)}
+                              className="p-4 rounded-[1.5rem] bg-zinc-800 text-zinc-500 hover:text-white border border-zinc-700 transition-all active:scale-90"
+                            >
+                              <X size={20} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Texto do prompt */}
+                      <div>
+                        <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 block">Texto do Prompt</label>
+                        {editingPromptId === p.id ? (
+                          <textarea
+                            value={editPromptTexto}
+                            onChange={e => setEditPromptTexto(e.target.value)}
+                            rows={6}
+                            className="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-6 py-5 text-white font-mono text-sm outline-none focus:border-primary resize-none shadow-inner leading-relaxed"
+                          />
+                        ) : (
+                          <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl px-6 py-5">
+                            <p className="text-zinc-300 font-mono text-sm leading-relaxed whitespace-pre-wrap">{p.texto}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {promptsList.length === 0 && (
+                    <div className="text-center py-20">
+                      <MessageSquare size={48} className="text-zinc-700 mx-auto mb-4" />
+                      <p className="text-zinc-600 font-bold">Nenhum prompt configurado.</p>
+                      <p className="text-zinc-700 text-sm mt-1">Clique em "Novo Prompt" para começar.</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'params' && (
+              <motion.div key="params" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+                <div className="flex justify-between items-center mb-10">
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tighter">Parâmetros do Plugin</h2>
+                    <p className="text-zinc-500 text-sm mt-1 font-medium">Configurações chave-valor consumidas pelo plugin After Effects.</p>
+                  </div>
+                  <button onClick={() => setIsCreateParamModalOpen(true)} className="bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.2em] flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95">
+                    <Plus size={16} /> Novo Parâmetro
+                  </button>
+                </div>
+
+                <div className="grid gap-4">
+                  {paramsList.map((param) => (
+                    <div key={param.chave} className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-6 flex flex-col md:flex-row items-start md:items-center gap-6 group hover:border-zinc-700 transition-all">
+
+                      {/* Ícone + Chave */}
+                      <div className="flex items-center gap-4 flex-shrink-0 w-full md:w-64">
+                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+                          <SlidersHorizontal size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-0.5">Chave</p>
+                          <p className="text-white font-mono font-bold text-sm">{param.chave}</p>
+                        </div>
+                      </div>
+
+                      {/* Valor — editável inline */}
+                      <div className="flex-1 w-full">
+                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">Valor</p>
+                        {editingParamKey === param.chave ? (
+                          <input
+                            value={editParamValor}
+                            onChange={e => setEditParamValor(e.target.value)}
+                            className="w-full bg-zinc-950 border border-primary/50 rounded-xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-primary shadow-inner"
+                            autoFocus
+                          />
+                        ) : (
+                          <p className="text-zinc-300 font-mono text-sm break-all bg-zinc-950/40 rounded-xl px-4 py-3 border border-zinc-800">{param.valor}</p>
+                        )}
+                      </div>
+
+                      {/* Ações */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {editingParamKey === param.chave ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveParam(param.chave)}
+                              className="p-4 rounded-2xl bg-green-600 text-white border border-green-600 transition-all active:scale-90 shadow-xl"
+                            >
+                              {savingParam ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            </button>
+                            <button
+                              onClick={() => setEditingParamKey(null)}
+                              className="p-4 rounded-2xl bg-zinc-800 text-zinc-500 hover:text-white border border-zinc-700 transition-all active:scale-90"
+                            >
+                              <X size={18} />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => { setEditingParamKey(param.chave); setEditParamValor(param.valor); }}
+                            className="p-4 rounded-2xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all active:scale-90"
+                          >
+                            <Edit3 size={18} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteParam(param.chave)}
+                          className="p-4 rounded-2xl bg-zinc-950 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 border border-zinc-800 transition-all active:scale-90"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {paramsList.length === 0 && (
+                    <div className="text-center py-20">
+                      <SlidersHorizontal size={48} className="text-zinc-700 mx-auto mb-4" />
+                      <p className="text-zinc-600 font-bold">Sem parâmetros configurados.</p>
+                      <p className="text-zinc-700 text-sm mt-1">Clique em "Novo Parâmetro" para adicionar.</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
           </AnimatePresence>
         </div>
       </div>
@@ -385,6 +741,89 @@ export function AdminPage() {
                     </form>
                 </motion.div>
             </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Criar Prompt */}
+      <AnimatePresence>
+        {isCreatePromptModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
+            <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="bg-zinc-950 border border-zinc-800 w-full max-w-2xl rounded-[3rem] p-12 relative shadow-2xl">
+              <button onClick={() => setIsCreatePromptModalOpen(false)} className="absolute top-10 right-10 p-3 bg-zinc-900 rounded-2xl text-zinc-500 hover:text-white border border-zinc-800 transition-colors"><X size={20} /></button>
+              <h3 className="text-3xl font-black text-white mb-10 flex items-center gap-4">
+                <div className="p-3 bg-primary/20 text-primary rounded-2xl"><MessageSquare size={32} /></div>
+                Novo Prompt
+              </h3>
+
+              <form onSubmit={handleCreatePrompt} className="flex flex-col gap-8">
+                <div>
+                  <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 block">Nome / Identificador</label>
+                  <input
+                    placeholder="Ex: parallax_v2"
+                    value={newPromptNome}
+                    onChange={e => setNewPromptNome(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-primary shadow-inner"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 block">Texto do Prompt</label>
+                  <textarea
+                    placeholder="Digite as instruções que serão enviadas à API de IA..."
+                    value={newPromptTexto}
+                    onChange={e => setNewPromptTexto(e.target.value)}
+                    rows={8}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-5 text-white font-mono text-sm outline-none focus:border-primary resize-none shadow-inner leading-relaxed"
+                    required
+                  />
+                </div>
+                <button type="submit" disabled={creatingPrompt} className="w-full bg-white text-black py-6 rounded-[2rem] font-black uppercase tracking-tighter text-lg shadow-2xl hover:bg-zinc-200 transition-all active:scale-95 flex items-center justify-center gap-3">
+                  {creatingPrompt ? <Loader2 className="animate-spin" size={24} /> : "Criar Prompt"}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Criar Parâmetro */}
+      <AnimatePresence>
+        {isCreateParamModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
+            <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-[3rem] p-12 relative shadow-2xl">
+              <button onClick={() => setIsCreateParamModalOpen(false)} className="absolute top-10 right-10 p-3 bg-zinc-900 rounded-2xl text-zinc-500 hover:text-white border border-zinc-800 transition-colors"><X size={20} /></button>
+              <h3 className="text-3xl font-black text-white mb-10 flex items-center gap-4">
+                <div className="p-3 bg-primary/20 text-primary rounded-2xl"><SlidersHorizontal size={32} /></div>
+                Novo Parâmetro
+              </h3>
+
+              <form onSubmit={handleCreateParam} className="flex flex-col gap-6">
+                <div>
+                  <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 block">Chave (identificador único)</label>
+                  <input
+                    placeholder="Ex: versao_atual, link_download"
+                    value={newParamChave}
+                    onChange={e => setNewParamChave(e.target.value.toLowerCase().replace(/ /g, '_'))}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white font-mono font-bold outline-none focus:border-primary shadow-inner"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 block">Valor</label>
+                  <input
+                    placeholder="Ex: 1.0.0 ou https://..."
+                    value={newParamValor}
+                    onChange={e => setNewParamValor(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 text-white font-mono font-bold outline-none focus:border-primary shadow-inner"
+                    required
+                  />
+                </div>
+                <button type="submit" disabled={creatingParam} className="w-full bg-white text-black py-6 rounded-[2rem] font-black uppercase tracking-tighter text-lg shadow-2xl hover:bg-zinc-200 transition-all active:scale-95 flex items-center justify-center gap-3">
+                  {creatingParam ? <Loader2 className="animate-spin" size={24} /> : "Criar Parâmetro"}
+                </button>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -11,6 +11,7 @@ import { UserDashboard } from './pages/UserDashboard';
 import { UploadPage } from './pages/UploadPage';
 import { SuccessPage } from './pages/SuccessPage';
 import { AdminPage } from './pages/AdminPage';
+import { GalleryPage } from './pages/GalleryPage';
 
 function Home() {
   return (
@@ -56,6 +57,7 @@ function App() {
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/success" element={<SuccessPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/gallery" element={<GalleryPage />} />
         </Routes>
       </main>
 
