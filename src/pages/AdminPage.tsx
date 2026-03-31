@@ -82,8 +82,6 @@ export function AdminPage() {
       });
       const lists = await listRes.json();
       if (lists.status === 'success') {
-        setLicenses(lists.keys || []);
-        setUsersList(lists.users || []);
         setSalesList(lists.sales || []);
       }
 
@@ -150,7 +148,7 @@ export function AdminPage() {
           discount_value: parseFloat(newCouponValue),
           plan_id: newCouponPlanId || null,
           max_uses: parseInt(newCouponMaxUses),
-          expires_at: newCouponExpiry || null,
+          expires_at: null,
           is_active: true
         })
       });
