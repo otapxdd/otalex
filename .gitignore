@@ -23,3 +23,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# API PHP — hospedada separadamente, não vai pro GitHub
+api/
