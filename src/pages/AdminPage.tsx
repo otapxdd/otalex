@@ -1,38 +1,29 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, DollarSign, Key, BarChart3, Plus, Search, X, Zap, PowerOff, CheckCircle2, Loader2, Coins, Edit3, Save, Ticket, Trash2, Calendar, Percent, MessageSquare, ToggleLeft, ToggleRight, SlidersHorizontal } from 'lucide-react';
+import { Users, DollarSign, Key, BarChart3, Plus, X, Zap, Loader2, Coins, Edit3, Save, Ticket, Trash2, Percent, MessageSquare, ToggleLeft, ToggleRight, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
 export function AdminPage() {
   const { success, warning } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'keys' | 'users' | 'sales' | 'plans' | 'coupons' | 'prompts' | 'params'>('overview');
-  const [isCreateKeyModalOpen, setIsCreateKeyModalOpen] = useState(false);
   const [isCreateCouponModalOpen, setIsCreateCouponModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
   // Data State
   const [stats, setStats] = useState<any[]>([]);
-  const [licenses, setLicenses] = useState<any[]>([]);
-  const [usersList, setUsersList] = useState<any[]>([]);
   const [salesList, setSalesList] = useState<any[]>([]);
   const [plansList, setPlansList] = useState<any[]>([]);
   const [couponsList, setCouponsList] = useState<any[]>([]);
   const [promptsList, setPromptsList] = useState<any[]>([]);
   const [paramsList, setParamsList] = useState<any[]>([]);
   
-  // Form State para Nova Key
-  const [newKeyPlan, setNewKeyPlan] = useState('Personalizado');
-  const [newKeyCredits, setNewKeyCredits] = useState<number>(50);
-  const [creatingKey, setCreatingKey] = useState(false);
-
   // Form State para Novo Cupom
   const [newCouponCode, setNewCouponCode] = useState("");
   const [newCouponType, setNewCouponType] = useState<"percentage" | "fixed">("percentage");
   const [newCouponValue, setNewCouponValue] = useState("");
   const [newCouponPlanId, setNewCouponPlanId] = useState("");
   const [newCouponMaxUses, setNewCouponMaxUses] = useState("0");
-  const [newCouponExpiry, setNewCouponExpiry] = useState("");
   const [creatingCoupon, setCreatingCoupon] = useState(false);
 
   // Edit Plans State
@@ -188,25 +179,7 @@ export function AdminPage() {
     } catch (err) { console.error(err); }
   };
 
-  const handleCreateKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreatingKey(true);
-    try {
-      const apiUrl = import.meta.env.PROD 
-        ? 'https://agapesi.ddns.com.br/teste/api/admin.php' 
-        : 'http://localhost/otalex/api/admin.php';
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_key', plan_name: newKeyPlan, credits: newKeyCredits })
-      });
-      if ((await res.json()).status === 'success') {
-        setIsCreateKeyModalOpen(false);
-        fetchAdminData();
-      }
-    } catch (err) { console.error(err); }
-    finally { setCreatingKey(false); }
-  };
+
 
   const handleUpdatePlan = async (id: number) => {
      try {
