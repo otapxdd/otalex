@@ -16,7 +16,7 @@ export function HeroSection() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border-primary/30 text-primary mb-8 font-medium text-sm">
             <Sparkles size={16} />
-            <span>A Revolução para Editores Geek e AMVs</span>
+            <span>A Revolução para Editores Geek</span>
           </div>
           
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 text-zinc-100">

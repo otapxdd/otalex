@@ -13,6 +13,8 @@ export function AdminPage() {
   // Data State
   const [stats, setStats] = useState<any[]>([]);
   const [salesList, setSalesList] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [keysList, setKeysList] = useState<any[]>([]);
   const [plansList, setPlansList] = useState<any[]>([]);
   const [couponsList, setCouponsList] = useState<any[]>([]);
   const [promptsList, setPromptsList] = useState<any[]>([]);
@@ -83,6 +85,8 @@ export function AdminPage() {
       const lists = await listRes.json();
       if (lists.status === 'success') {
         setSalesList(lists.sales || []);
+        setUsersList(lists.users || []);
+        setKeysList(lists.keys || []);
       }
 
       // 3. Plans
@@ -375,6 +379,81 @@ export function AdminPage() {
                 </div>
               </motion.div>
             )}
+
+            {activeTab === 'sales' && (
+              <motion.div key="sales" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+                <h2 className="text-3xl font-black text-white mb-10 tracking-tighter">Vendas</h2>
+                <div className="bg-zinc-950/50 rounded-[2rem] border border-zinc-800 overflow-hidden">
+                    <table className="w-full text-left text-sm text-zinc-400">
+                        <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-500 uppercase font-black text-[10px] tracking-widest">
+                            <tr><th className="px-8 py-5">Código</th><th className="px-8 py-5">Cliente</th><th className="px-8 py-5">Produto</th><th className="px-8 py-5">Valor</th><th className="px-8 py-5">Método</th><th className="px-8 py-5">Status</th><th className="px-8 py-5">Data</th></tr>
+                        </thead>
+                        <tbody>
+                            {salesList.map((s, i) => (
+                                <tr key={i} className="border-b border-zinc-900/50 hover:bg-white/5 transition-all">
+                                    <td className="px-8 py-5 font-mono text-zinc-100 font-bold">{s.transaction_code}</td>
+                                    <td className="px-8 py-5">User #{s.user_id}</td>
+                                    <td className="px-8 py-5">{s.product_name || '-'}</td>
+                                    <td className="px-8 py-5 font-black text-white">R$ {parseFloat(s.amount).toFixed(2)}</td>
+                                    <td className="px-8 py-5 uppercase">{s.payment_method || 'PIX'}</td>
+                                    <td className="px-8 py-5"><span className="text-[9px] font-black uppercase bg-green-500/10 text-green-400 px-3 py-1 rounded-full">{s.status}</span></td>
+                                    <td className="px-8 py-5">{new Date(s.created_at).toLocaleDateString('pt-BR')}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'keys' && (
+              <motion.div key="keys" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+                <h2 className="text-3xl font-black text-white mb-10 tracking-tighter">License Keys</h2>
+                <div className="bg-zinc-950/50 rounded-[2rem] border border-zinc-800 overflow-hidden">
+                    <table className="w-full text-left text-sm text-zinc-400">
+                        <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-500 uppercase font-black text-[10px] tracking-widest">
+                            <tr><th className="px-8 py-5">Key</th><th className="px-8 py-5">Usuário (Dono)</th><th className="px-8 py-5">Plano</th><th className="px-8 py-5">Créditos</th><th className="px-8 py-5">Status</th></tr>
+                        </thead>
+                        <tbody>
+                            {keysList.map((k, i) => (
+                                <tr key={i} className="border-b border-zinc-900/50 hover:bg-white/5 transition-all">
+                                    <td className="px-8 py-5 font-mono text-primary font-bold tracking-widest">{k.license_key}</td>
+                                    <td className="px-8 py-5">User #{k.user_id}</td>
+                                    <td className="px-8 py-5">{k.plan_name}</td>
+                                    <td className="px-8 py-5 font-bold">{k.credits_used} / {k.credits_total}</td>
+                                    <td className="px-8 py-5"><span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full ${k.status === 'ativa' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{k.status}</span></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'users' && (
+              <motion.div key="users" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+                <h2 className="text-3xl font-black text-white mb-10 tracking-tighter">Usuários Cadastrados</h2>
+                <div className="bg-zinc-950/50 rounded-[2rem] border border-zinc-800 overflow-hidden">
+                    <table className="w-full text-left text-sm text-zinc-400">
+                        <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-500 uppercase font-black text-[10px] tracking-widest">
+                            <tr><th className="px-8 py-5">ID</th><th className="px-8 py-5">Nome</th><th className="px-8 py-5">Email</th><th className="px-8 py-5">Otacoins</th><th className="px-8 py-5">Cadastro</th></tr>
+                        </thead>
+                        <tbody>
+                            {usersList.map((u, i) => (
+                                <tr key={i} className="border-b border-zinc-900/50 hover:bg-white/5 transition-all">
+                                    <td className="px-8 py-5 font-bold">#{u.id}</td>
+                                    <td className="px-8 py-5 text-white font-bold">{u.full_name || '-'}</td>
+                                    <td className="px-8 py-5">{u.email}</td>
+                                    <td className="px-8 py-5 text-secondary font-bold font-mono">{u.otacoins_balance}</td>
+                                    <td className="px-8 py-5">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+              </motion.div>
+            )}
+
 
             {activeTab === 'coupons' && (
               <motion.div key="coupons" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
