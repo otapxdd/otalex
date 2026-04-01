@@ -69,10 +69,10 @@ export function AdminPage() {
       const statsData = await statsRes.json();
       if (statsData.status === 'success') {
         setStats([
-          { label: 'Faturamento Total', value: `R$ ${statsData.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, increase: '+15%', icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10' },
-          { label: 'Total Usuários', value: statsData.users_count.toString(), icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-          { label: 'Keys Geradas', value: statsData.keys_count.toString(), icon: Key, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Cupons Ativos', value: couponsList.filter(c => c.is_active).length.toString(), icon: Ticket, color: 'text-secondary', bg: 'bg-secondary/10' },
+          { label: 'Faturamento Total', value: `R$ ${Number(statsData.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, increase: '+15%', icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10' },
+          { label: 'Total Usuários', value: String(statsData.users_count || 0), icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+          { label: 'Keys Geradas', value: String(statsData.keys_count || 0), icon: Key, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Cupons Ativos', value: couponsList.filter(c => c && c.is_active).length.toString(), icon: Ticket, color: 'text-secondary', bg: 'bg-secondary/10' },
         ]);
       }
 
@@ -84,9 +84,9 @@ export function AdminPage() {
       });
       const lists = await listRes.json();
       if (lists.status === 'success') {
-        setSalesList(lists.sales || []);
-        setUsersList(lists.users || []);
-        setKeysList(lists.keys || []);
+        setSalesList(Array.isArray(lists.sales) ? lists.sales : []);
+        setUsersList(Array.isArray(lists.users) ? lists.users : []);
+        setKeysList(Array.isArray(lists.keys) ? lists.keys : []);
       }
 
       // 3. Plans
@@ -96,7 +96,7 @@ export function AdminPage() {
         body: JSON.stringify({ action: 'get_plans' })
       });
       const plansData = await plansRes.json();
-      if (plansData.status === 'success') setPlansList(plansData.plans || []);
+      if (plansData.status === 'success') setPlansList(Array.isArray(plansData.plans) ? plansData.plans : []);
 
       // 4. Coupons
       const couponsRes = await fetch(apiUrl, {
@@ -105,7 +105,7 @@ export function AdminPage() {
         body: JSON.stringify({ action: 'get_coupons' })
       });
       const couponsData = await couponsRes.json();
-      if (couponsData.status === 'success') setCouponsList(couponsData.coupons || []);
+      if (couponsData.status === 'success') setCouponsList(Array.isArray(couponsData.coupons) ? couponsData.coupons : []);
 
       // 5. Prompts
       const promptsRes = await fetch(apiUrl, {
@@ -114,7 +114,7 @@ export function AdminPage() {
         body: JSON.stringify({ action: 'get_prompts' })
       });
       const promptsData = await promptsRes.json();
-      if (promptsData.status === 'success') setPromptsList(promptsData.prompts || []);
+      if (promptsData.status === 'success') setPromptsList(Array.isArray(promptsData.prompts) ? promptsData.prompts : []);
 
       // 6. Params Plugin
       const paramsRes = await fetch(apiUrl, {
@@ -123,7 +123,7 @@ export function AdminPage() {
         body: JSON.stringify({ action: 'get_params' })
       });
       const paramsData = await paramsRes.json();
-      if (paramsData.status === 'success') setParamsList(paramsData.params || []);
+      if (paramsData.status === 'success') setParamsList(Array.isArray(paramsData.params) ? paramsData.params : []);
 
     } catch (err) {
       console.error(err);
