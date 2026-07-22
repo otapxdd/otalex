@@ -34,8 +34,7 @@ export function Navbar() {
   const navLinks = [
     { label: 'Início', href: '/#hero' },
     { label: 'Planos', href: '/#pricing' },
-    { label: 'Galeria', href: '/gallery' },
-    { label: 'Testar Licença', href: '/#dashboard' }
+    { label: 'Galeria', href: '/gallery' }
   ];
 
   const isAdmin = user?.role === 'admin';
@@ -89,9 +88,17 @@ export function Navbar() {
             )}
 
             {isAuthenticated ? (
-              <Link to="/dashboard" className="flex items-center gap-2 text-zinc-300 hover:text-white transition-colors text-sm font-medium">
-                <UserCircle size={18} /> Minha Conta
-              </Link>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg text-sm text-zinc-300">
+                   <div className="w-4 h-4 bg-secondary/20 rounded-full flex items-center justify-center">
+                      <span className="text-secondary text-[10px] font-bold">$</span>
+                   </div>
+                   <span className="font-bold text-white">{user?.otacoins_balance || 0}</span>
+                </div>
+                <Link to="/dashboard" className="flex items-center gap-2 text-zinc-300 hover:text-white transition-colors text-sm font-medium">
+                  <UserCircle size={18} /> Minha Conta
+                </Link>
+              </div>
             ) : (
               <Link to="/auth" className="flex items-center gap-2 text-zinc-300 hover:text-white transition-colors text-sm font-medium">
                 <UserCircle size={18} /> Entrar
@@ -146,13 +153,19 @@ export function Navbar() {
           )}
 
           {isAuthenticated ? (
-            <Link 
-              to="/dashboard"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-zinc-300 font-medium w-full text-center py-2 flex items-center justify-center gap-2"
-            >
-              <UserCircle size={20} /> Minha Conta
-            </Link>
+            <div className="flex flex-col items-center gap-4 w-full px-6">
+              <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-sm w-full justify-center">
+                 <span className="text-zinc-500">Saldo:</span>
+                 <span className="font-bold text-secondary">{user?.otacoins_balance || 0} Otacoins</span>
+              </div>
+              <Link 
+                to="/dashboard"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-zinc-300 font-medium w-full text-center py-2 flex items-center justify-center gap-2"
+              >
+                <UserCircle size={20} /> Minha Conta
+              </Link>
+            </div>
           ) : (
             <Link 
               to="/auth"

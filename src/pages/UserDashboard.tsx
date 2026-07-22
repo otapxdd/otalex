@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
-import { KeyRound, ShoppingBag, CheckCircle, Clock, Image as ImageIcon, Edit2, Loader2, Download, Tag } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ShoppingBag, CheckCircle, Clock, Image as ImageIcon, Edit2, Loader2, Download, Tag, Lock, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,14 +7,22 @@ import { useToast } from '../contexts/ToastContext';
 
 export function UserDashboard() {
   const { user, login } = useAuth();
-  const { success } = useToast();
+  const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<{
-    keys: any[],
     transactions: any[],
     projects: any[]
-  }>({ keys: [], transactions: [], projects: [] });
+  }>({ transactions: [], projects: [] });
   const [pluginParams, setPluginParams] = useState<Record<string, string>>({});
+
+  // Senha States
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+
 
   useEffect(() => {
     async function loadDashboard() {
@@ -34,7 +42,6 @@ export function UserDashboard() {
         const data = await res.json();
         if (data.status === 'success') {
           setDashboardData({
-            keys: data.keys || [],
             transactions: data.transactions || [],
             projects: data.projects || []
           });
@@ -77,6 +84,47 @@ export function UserDashboard() {
       </div>
     );
   }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) {
+      error("As novas senhas não coincidem!");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const apiUrl = import.meta.env.PROD 
+        ? 'https://agapesi.ddns.com.br/teste/api/auth.php' 
+        : 'http://localhost/otalex/api/auth.php';
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+           action: 'change_password', 
+           user_id: user?.id, 
+           current_password: currentPassword, 
+           new_password: newPassword 
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+         success(data.message);
+         setIsPasswordModalOpen(false);
+         setCurrentPassword('');
+         setNewPassword('');
+         setConfirmNewPassword('');
+      } else {
+         error(data.message || "Erro ao alterar senha.");
+      }
+    } catch (err) { 
+         error("Erro de conexão ao alterar senha.");
+    } finally { 
+      setChangingPassword(false); 
+    }
+  }
+
+
 
   // Converte links do Google Drive para download direto
   // Suporta formatos: /file/d/ID/view e drive.google.com/open?id=ID
@@ -159,56 +207,7 @@ export function UserDashboard() {
           </div>
         </motion.div>
         
-        {/* Minhas Keys Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-6"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-primary/20 text-primary">
-              <KeyRound size={24} />
-            </div>
-            <h2 className="text-2xl font-semibold text-zinc-100">Minhas Keys</h2>
-          </div>
 
-          <div className="flex flex-col gap-4">
-            {dashboardData.keys.length === 0 ? (
-               <div className="glass-card p-10 border border-zinc-800 text-center text-zinc-500">
-                  Nenhuma chave de licença encontrada.
-               </div>
-            ) : dashboardData.keys.map((k, i) => (
-              <div key={i} className={`glass-card p-6 border ${k.status === 'esgotada' ? 'border-zinc-800 opacity-60' : 'border-primary/30'} relative overflow-hidden group`}>
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h3 className="text-lg font-mono font-bold text-zinc-200 tracking-wider mb-1">{k.license_key}</h3>
-                    <p className="text-sm text-zinc-500">Referente ao {k.plan_name}</p>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${k.status === 'esgotada' ? 'bg-zinc-800 text-zinc-500' : 'bg-green-500/20 text-green-400'}`}>
-                    {k.status}
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-end border-t border-zinc-800/60 pt-4">
-                  <div>
-                    <span className="block text-xs uppercase text-zinc-500 font-semibold mb-1">Créditos de Uso</span>
-                    <span className="text-xl font-bold text-zinc-200">{k.credits_total - k.credits_used} / {k.credits_total}</span>
-                  </div>
-                  {k.status !== 'esgotada' && (
-                    <button 
-                      onClick={() => {
-                         navigator.clipboard.writeText(k.license_key);
-                         success('Key copiada para a área de transferência!');
-                      }}
-                      className="text-sm font-semibold text-primary hover:text-primary-hover flex items-center gap-1 group-hover:underline">
-                      Copiar Key
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
 
         {/* Histórico de Compras */}
         <motion.div 
@@ -301,7 +300,71 @@ export function UserDashboard() {
           </div>
         </div>
       </motion.div>
+
+      {/* Segurança da Conta */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="mt-12 flex flex-col gap-6"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-lg bg-orange-500/20 text-orange-400">
+            <Lock size={24} />
+          </div>
+          <h2 className="text-2xl font-semibold text-zinc-100">Segurança da Conta</h2>
+        </div>
+        <div className="glass-card border border-zinc-800 overflow-hidden p-8">
+           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div>
+                 <h3 className="font-bold text-xl text-white mb-1">E-mail e Senha de Acesso</h3>
+                 <p className="text-sm text-zinc-400">Atualize a senha mestre que você usa para fazer login na Plataforma Otalex.</p>
+              </div>
+              <button 
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-white px-8 py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
+              >
+                 <Lock size={18} /> Trocar Minha Senha
+              </button>
+           </div>
+        </div>
+      </motion.div>
       
+      {/* Modal Mudar Senha */}
+      <AnimatePresence>
+        {isPasswordModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
+             <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="bg-zinc-950 border border-zinc-800 w-full max-w-md rounded-[3rem] p-10 relative shadow-2xl">
+                <button onClick={() => setIsPasswordModalOpen(false)} className="absolute top-8 right-8 p-3 bg-zinc-900 rounded-2xl text-zinc-500 hover:text-white border border-zinc-800 transition-colors"> <X size={20} /> </button>
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="p-3 bg-orange-500/20 text-orange-400 rounded-2xl"> <Lock size={24} /> </div>
+                  <h3 className="text-2xl font-bold text-white tracking-tighter">Trocar Senha</h3>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="flex flex-col gap-6">
+                   <div>
+                       <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Senha Atual</label>
+                       <input type="password" placeholder="••••••••" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-white font-medium outline-none focus:border-primary shadow-inner" required />
+                   </div>
+                   <div>
+                       <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Nova Senha</label>
+                       <input type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={6} className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-white font-medium outline-none focus:border-primary shadow-inner" required />
+                   </div>
+                   <div>
+                       <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Confirmar Nova Senha</label>
+                       <input type="password" placeholder="••••••••" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} minLength={6} className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-white font-medium outline-none focus:border-primary shadow-inner" required />
+                   </div>
+                   <button type="submit" disabled={changingPassword} className="w-full mt-4 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white py-5 rounded-[2rem] font-black uppercase tracking-tighter flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-primary/20"> 
+                     {changingPassword ? <Loader2 className="animate-spin" size={20} /> : "Atualizar Senha"} 
+                   </button>
+                </form>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+
+
     </div>
   );
 }

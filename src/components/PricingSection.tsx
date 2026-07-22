@@ -371,18 +371,18 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
              user_id: user.id,
              plan_name: planToBuy.name,
              otacoins: planToBuy.otacoins,
-             amount: 0
+             amount: 0,
+             coupon_code: coupon?.code || null
            })
         });
 
         const data = await res.json();
-        if (data.status === 'success') {
-           const key = data.key;
+         if (data.status === 'success') {
            clearCart();
            onClose();
-           navigate('/success', { state: { licenseKey: key } });
+           navigate('/success');
            return;
-        }
+         }
       }
 
       // Mercado Pago não aceita valores abaixo de R$ 0,50:
@@ -409,7 +409,8 @@ function CartDrawer({ isOpen, onClose }: { isOpen: boolean, onClose: () => void 
             name: planToBuy.name,
             price: effectiveTotal,
             otacoins: planToBuy.otacoins
-          }
+          },
+          coupon_code: coupon?.code || null
         })
       });
 

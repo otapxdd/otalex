@@ -1,12 +1,10 @@
 import { motion } from 'framer-motion';
-import { CheckCircle, Download, KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-
+import { CheckCircle, Download, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 export function SuccessPage() {
-  const location = useLocation();
-  const generatedKey = location.state?.licenseKey;
-
   return (
+    <>
+
     <div className="min-h-screen pt-32 pb-20 px-6 container mx-auto flex flex-col items-center justify-center">
       
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[150px] rounded-full pointer-events-none z-0" />
@@ -24,39 +22,12 @@ export function SuccessPage() {
         <h1 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">Pagamento Confirmado!</h1>
         
         <p className="text-zinc-400 mb-8 max-w-lg leading-relaxed">
-          Muito obrigado por apoiar o Otalex! Sua compra nos ajuda imensamente a manter o desenvolvimento do projeto firme e forte. O script já está disponível para você.
+          Muito obrigado por apoiar o Otalex! Sua compra nos ajuda imensamente a manter o desenvolvimento do projeto firme e forte. Suas Otacoins já foram adicionadas à sua conta.
         </p>
 
         <div className="w-full bg-zinc-950/50 border border-zinc-800 rounded-2xl p-6 mb-8 text-left">
-          {generatedKey ? (
-            <div className="mb-6">
-              <span className="text-xs uppercase font-semibold text-zinc-500 tracking-wider flex items-center gap-2 mb-2">
-                <KeyRound size={16} /> Sua License Key
-              </span>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-200 font-mono text-lg px-4 py-3 rounded-xl tracking-wider select-all cursor-text flex items-center justify-center sm:justify-start overflow-hidden text-ellipsis whitespace-nowrap">
-                  {generatedKey}
-                </div>
-                <button 
-                  onClick={() => navigator.clipboard.writeText(generatedKey)}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-medium transition-colors whitespace-nowrap"
-                >
-                  Copiar
-                </button>
-              </div>
-              <p className="text-xs text-zinc-500 mt-2">Guarde esta chave. Você vai precisar dela para ativar o Otalex no After Effects.</p>
-            </div>
-          ) : (
-             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-4">
-                <AlertCircle className="text-red-400 shrink-0" size={24} />
-                <div>
-                   <h4 className="font-bold text-red-100 text-sm">Chave não encontrada</h4>
-                   <p className="text-xs text-red-300 opacity-80 mt-1">Houve um problema ao recuperar sua chave. Por favor, verifique seu painel ou entre em contato com o suporte.</p>
-                </div>
-             </div>
-          )}
 
-          <div className="border-t border-zinc-800/60 pt-6">
+          <div className="pt-2">
             <span className="text-xs uppercase font-semibold text-zinc-500 tracking-wider flex items-center gap-2 mb-3">
               <Download size={16} /> Arquivos do Projeto
             </span>
@@ -78,5 +49,6 @@ export function SuccessPage() {
       </motion.div>
 
     </div>
+    </>
   );
 }

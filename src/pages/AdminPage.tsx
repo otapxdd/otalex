@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, DollarSign, Key, BarChart3, Plus, X, Zap, Loader2, Coins, Edit3, Save, Ticket, Trash2, Percent, MessageSquare, ToggleLeft, ToggleRight, SlidersHorizontal } from 'lucide-react';
+import { Users, DollarSign, BarChart3, Plus, X, Zap, Loader2, Coins, Edit3, Save, Ticket, Trash2, Percent, MessageSquare, ToggleLeft, ToggleRight, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
 export function AdminPage() {
   const { success, warning } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'keys' | 'users' | 'sales' | 'plans' | 'coupons' | 'prompts' | 'params'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'coins' | 'users' | 'sales' | 'plans' | 'coupons' | 'prompts' | 'params'>('overview');
   const [isCreateCouponModalOpen, setIsCreateCouponModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -14,7 +14,7 @@ export function AdminPage() {
   const [stats, setStats] = useState<any[]>([]);
   const [salesList, setSalesList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
-  const [keysList, setKeysList] = useState<any[]>([]);
+
   const [plansList, setPlansList] = useState<any[]>([]);
   const [couponsList, setCouponsList] = useState<any[]>([]);
   const [promptsList, setPromptsList] = useState<any[]>([]);
@@ -27,6 +27,12 @@ export function AdminPage() {
   const [newCouponPlanId, setNewCouponPlanId] = useState("");
   const [newCouponMaxUses, setNewCouponMaxUses] = useState("0");
   const [creatingCoupon, setCreatingCoupon] = useState(false);
+
+  // Form State para Gerenciar Coins
+  const [coinsSearchUser, setCoinsSearchUser] = useState("");
+  const [coinsAmount, setCoinsAmount] = useState("");
+  const [coinsAction, setCoinsAction] = useState<"add" | "remove" | "set">("add");
+  const [managingCoins, setManagingCoins] = useState(false);
 
   // Edit Plans State
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
@@ -71,7 +77,7 @@ export function AdminPage() {
         setStats([
           { label: 'Faturamento Total', value: `R$ ${Number(statsData.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, increase: '+15%', icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10' },
           { label: 'Total Usuários', value: String(statsData.users_count || 0), icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-          { label: 'Keys Geradas', value: String(statsData.keys_count || 0), icon: Key, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Projetos Parallax', value: String(statsData.projects_count || 0), icon: Ticket, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Cupons Ativos', value: couponsList.filter(c => c && c.is_active).length.toString(), icon: Ticket, color: 'text-secondary', bg: 'bg-secondary/10' },
         ]);
       }
@@ -86,7 +92,6 @@ export function AdminPage() {
       if (lists.status === 'success') {
         setSalesList(Array.isArray(lists.sales) ? lists.sales : []);
         setUsersList(Array.isArray(lists.users) ? lists.users : []);
-        setKeysList(Array.isArray(lists.keys) ? lists.keys : []);
       }
 
       // 3. Plans
@@ -164,6 +169,38 @@ export function AdminPage() {
       }
     } catch (err) { console.error(err); }
     finally { setCreatingCoupon(false); }
+  };
+
+  const handleManageCoins = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setManagingCoins(true);
+    try {
+      const apiUrl = import.meta.env.PROD 
+        ? 'https://agapesi.ddns.com.br/teste/api/admin.php' 
+        : 'http://localhost/otalex/api/admin.php';
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'manage_user_coins', 
+          search: coinsSearchUser,
+          amount: parseInt(coinsAmount),
+          action_type: coinsAction
+        })
+      });
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        success('Moedas atualizadas com sucesso!');
+        setCoinsSearchUser("");
+        setCoinsAmount("");
+        fetchAdminData();
+      } else {
+        warning(data.message || 'Usuário não encontrado.');
+      }
+    } catch (err) { console.error(err); }
+    finally { setManagingCoins(false); }
   };
 
   const deleteCoupon = async (id: number) => {
@@ -331,7 +368,7 @@ export function AdminPage() {
         <div className="w-full lg:w-64 flex flex-col gap-2">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
-            { id: 'keys', label: 'License Keys', icon: Key },
+            { id: 'coins', label: 'Gerenciar Coins', icon: Coins },
             { id: 'users', label: 'Usuários', icon: Users },
             { id: 'sales', label: 'Vendas', icon: DollarSign },
             { id: 'plans', label: 'Planos', icon: Zap },
@@ -406,26 +443,67 @@ export function AdminPage() {
               </motion.div>
             )}
 
-            {activeTab === 'keys' && (
-              <motion.div key="keys" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-                <h2 className="text-3xl font-black text-white mb-10 tracking-tighter">License Keys</h2>
-                <div className="bg-zinc-950/50 rounded-[2rem] border border-zinc-800 overflow-hidden">
-                    <table className="w-full text-left text-sm text-zinc-400">
-                        <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-500 uppercase font-black text-[10px] tracking-widest">
-                            <tr><th className="px-8 py-5">Key</th><th className="px-8 py-5">Usuário (Dono)</th><th className="px-8 py-5">Plano</th><th className="px-8 py-5">Créditos</th><th className="px-8 py-5">Status</th></tr>
-                        </thead>
-                        <tbody>
-                            {keysList.map((k, i) => (
-                                <tr key={i} className="border-b border-zinc-900/50 hover:bg-white/5 transition-all">
-                                    <td className="px-8 py-5 font-mono text-primary font-bold tracking-widest">{k.license_key}</td>
-                                    <td className="px-8 py-5">User #{k.user_id}</td>
-                                    <td className="px-8 py-5">{k.plan_name}</td>
-                                    <td className="px-8 py-5 font-bold">{k.credits_used} / {k.credits_total}</td>
-                                    <td className="px-8 py-5"><span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full ${k.status === 'ativa' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{k.status}</span></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {activeTab === 'coins' && (
+              <motion.div key="coins" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+                <div className="flex flex-col mb-10">
+                    <h2 className="text-3xl font-black text-white tracking-tighter">Gerenciar Otacoins</h2>
+                    <p className="text-zinc-500 font-medium mt-2">Pesquise por email ou ID para adicionar, remover ou definir o saldo de OtaCoins.</p>
+                </div>
+                
+                <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] p-8 max-w-2xl">
+                    <form onSubmit={handleManageCoins} className="flex flex-col gap-6">
+                        <div>
+                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 block">Email ou Username do Usuário</label>
+                            <div className="relative">
+                                <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
+                                <input 
+                                  required
+                                  value={coinsSearchUser}
+                                  onChange={e => setCoinsSearchUser(e.target.value)}
+                                  placeholder="usuario@email.com"
+                                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-12 pr-6 py-4 text-white placeholder:text-zinc-700 outline-none focus:border-primary transition-all font-medium"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 block">Ação</label>
+                                <select 
+                                  value={coinsAction}
+                                  onChange={e => setCoinsAction(e.target.value as any)}
+                                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-4 text-white outline-none focus:border-primary transition-all appearance-none cursor-pointer font-medium"
+                                >
+                                    <option value="add">Adicionar (+)</option>
+                                    <option value="remove">Remover (-)</option>
+                                    <option value="set">Definir Exato (=)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 block">Quantidade</label>
+                                <div className="relative">
+                                    <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+                                    <input 
+                                      required
+                                      type="number"
+                                      min={1}
+                                      value={coinsAmount}
+                                      onChange={e => setCoinsAmount(e.target.value)}
+                                      placeholder="1000"
+                                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-12 pr-6 py-4 text-white placeholder:text-zinc-700 outline-none focus:border-primary transition-all font-black"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button 
+                          type="submit" 
+                          disabled={managingCoins}
+                          className="w-full mt-4 bg-primary hover:bg-primary-hover text-white py-4 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            {managingCoins ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} /> Confirmar Transação</>}
+                        </button>
+                    </form>
                 </div>
               </motion.div>
             )}
@@ -876,6 +954,8 @@ export function AdminPage() {
           </div>
         )}
       </AnimatePresence>
+
+
 
     </div>
   );

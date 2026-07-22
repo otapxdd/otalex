@@ -46,6 +46,7 @@ CREATE TABLE license_keys (
     is_unlimited BOOLEAN DEFAULT FALSE,
     status license_status DEFAULT 'ativa',
     user_id INT NULL, -- Pode ser NULL até a chave ser resgatada/comprada
+    password_hash VARCHAR(255) NULL, -- Senha exigida para usar a chave
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     activated_at TIMESTAMP NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -92,3 +93,10 @@ CREATE TABLE parallax_images (
 -- Inserir o primeiro Admin por padrão para garantir acesso inicial
 INSERT INTO users (name, username, email, password_hash, role) 
 VALUES ('Admin', 'admin_otalex', 'admin@otalex.com', '$2y$10$ExemploHashInseguroMasSeraTrocado', 'admin');
+
+-- ==========================================
+-- SCRIPT DE ATUALIZAÇÃO (ALTER TABLE)
+-- Execute este comando no banco existente
+-- para adicionar a coluna de senha da chave:
+-- ==========================================
+-- ALTER TABLE license_keys ADD COLUMN password_hash VARCHAR(255) NULL;

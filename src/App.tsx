@@ -3,7 +3,7 @@ import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { PricingSection } from './components/PricingSection';
 import { CommunityGallery } from './components/CommunityGallery';
-import { LicenseDashboard } from './components/LicenseDashboard';
+
 import { DiscordBanner } from './components/DiscordBanner';
 import { Footer } from './components/Footer';
 import { AuthPage } from './pages/AuthPage';
@@ -24,10 +24,6 @@ function Home() {
 
       <div className="w-full border-t border-zinc-800/40">
         <CommunityGallery />
-      </div>
-
-      <div className="w-full border-t border-zinc-800/40">
-        <LicenseDashboard />
       </div>
 
       <DiscordBanner />
